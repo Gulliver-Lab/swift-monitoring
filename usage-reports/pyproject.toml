@@ -1,0 +1,41 @@
+[project]
+name = "reports"
+version = "0.1.0"
+description = "Generate infographics for the cluster usage"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "mariadb>=1.1.14",
+    "pandas>=3.0.2",
+    "seaborn>=0.13.2",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "mypy",
+    "taskipy",
+    "pandas-stubs>=2.3.3.251201",
+    "types-seaborn>=0.13.2.20251221",
+]
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.pytest]
+pythonpath = ["src"]
+
+[tool.mypy]
+exclude = ["build"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.taskipy.tasks]
+format = "ruff format ."
+lint = "ruff check . --fix"
+check-formatting = "ruff format --check ."
+check-linting = "ruff check --select I ."
+check-typing = "mypy ."
+all = "task format && task lint && task check-typing"
