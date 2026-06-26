@@ -6,6 +6,16 @@ import pandas as pd
 
 MEMORY_MIN_BYTES = 500 * 1024**2
 
+JOB_COLUMN_ALIASES = {
+    "user": ["user", "user_name"],
+    "job_name": ["job_name", "jobname"],
+    "job_id": ["job_id", "jobid"],
+    "started_at": ["started_at", "time_start"],
+    "ended_at": ["ended_at", "time_end"],
+    "requested_mem": ["requested_mem", "reqmem", "req_mem"],
+    "max_rss": ["max_rss", "maxrss"],
+}
+
 _MEMORY_UNITS = {
     "": 1,
     "B": 1,
@@ -17,6 +27,17 @@ _MEMORY_UNITS = {
 }
 
 _SLURM_MEMORY_PATTERN = re.compile(r"^\s*(\d+(?:\.\d+)?)([BKMGTP]?)\s*$", re.IGNORECASE)
+
+
+def normalize_job_columns(df: pd.DataFrame) -> pd.DataFrame:
+    result = df.copy()
+    rename: dict[str, str] = {}
+    for canonical, aliases in JOB_COLUMN_ALIASES.items():
+        for alias in aliases:
+            if alias in result.columns:
+                rename[alias] = canonical
+                break
+    return result.rename(columns=rename)
 
 
 def parse_slurm_memory(value: str | int | float | None) -> int | None:
@@ -35,7 +56,7 @@ def parse_slurm_memory(value: str | int | float | None) -> int | None:
 
 
 def enrich_with_memory_columns(df: pd.DataFrame) -> pd.DataFrame:
-    result = df.copy()
+    result = normalize_job_columns(df)
     result["requested_bytes"] = result["requested_mem"].map(parse_slurm_memory)
     result["used_bytes"] = result["max_rss"].map(parse_slurm_memory)
     return result

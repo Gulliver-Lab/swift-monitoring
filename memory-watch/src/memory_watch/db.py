@@ -13,17 +13,10 @@ def load_jobs_for_period(start: datetime, end: datetime) -> pd.DataFrame:
     try:
         conn = mariadb.connect(**db_config())
         query = f"""
-        SELECT
-            user_name,
-            job_name,
-            job_id,
-            started_at,
-            ended_at,
-            requested_mem,
-            max_rss
+        SELECT *
         FROM default_job_table
-        WHERE started_at < {end.timestamp()}
-          AND ended_at > {start.timestamp()}
+        WHERE time_end > {start.timestamp()}
+          AND time_end <= {end.timestamp()}
         """
         return pd.read_sql_query(query, con=conn)
     finally:
