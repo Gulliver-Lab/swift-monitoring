@@ -51,4 +51,5 @@ def test_load_jobs_for_period_uses_expected_query(monkeypatch):
         "mem_req",
         "tres_req",
         "tres_usage_in_max",
+        "duration",
     ]
