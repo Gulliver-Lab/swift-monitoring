@@ -47,7 +47,11 @@ def format_jobs_table(df: pd.DataFrame) -> str:
     if df.empty:
         return "No matching jobs"
 
-    output = normalize_job_columns(df)
+    output = (
+        normalize_job_columns(df)
+        .sort_values(by="over_provision")
+        .reset_index(drop=True)
+    )
 
     if "duration" not in output.columns:
         if {"time_start", "time_end"}.issubset(output.columns):
@@ -67,12 +71,13 @@ def format_jobs_table(df: pd.DataFrame) -> str:
     )
     output["requested_memory"] = output["requested_memory"].map(format_bytes)
     output["used_memory"] = output["used_memory"].map(format_bytes)
+    output["over_provision"] = output["over_provision"].map(format_bytes)
     output["duration"] = output["duration"].map(format_duration)
     output["usage_ratio"] = output["usage_ratio"].map(
         lambda value: "-" if pd.isna(value) else f"{float(value):.2f}"
     )
 
-    output.drop_duplicates(subset=["user", "job_name", "usage_ratio"])
+    output.drop_duplicates(subset=["user", "job_name", "usage_ratio"], inplace=True)
 
     columns = [
         "user",
@@ -81,6 +86,7 @@ def format_jobs_table(df: pd.DataFrame) -> str:
         "job_name",
         "requested_memory",
         "used_memory",
+        "over_provision",
         "usage_ratio",
     ]
     return output[columns].to_string(index=False)

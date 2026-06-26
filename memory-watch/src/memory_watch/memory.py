@@ -4,7 +4,7 @@ import re
 
 import pandas as pd
 
-MEMORY_MIN_BYTES = 1000 * 1024**2
+MIN_OVER_PROVISION_BYTES = 500 * 1024**2  # 500M
 
 JOB_COLUMN_ALIASES = {
     "user": ["user", "user_name"],
@@ -155,13 +155,14 @@ def enrich_with_memory_columns(df: pd.DataFrame) -> pd.DataFrame:
         )
     result["requested_bytes"] = result[requested_column] * 1024**2
     result["used_bytes"] = result[used_column].map(_parse_memory_cell)
+    result["over_provision"] = result["requested_bytes"] - result["used_bytes"]
     return result
 
 
 def filter_underused_jobs(df: pd.DataFrame) -> pd.DataFrame:
     result = df.copy()
     result = result.dropna(subset=["requested_bytes", "used_bytes"])
-    result = result[result["requested_bytes"] >= MEMORY_MIN_BYTES]
+    result = result[result["over_provision"] >= MIN_OVER_PROVISION_BYTES]
     result = result[result["used_bytes"] <= 0.5 * result["requested_bytes"]]
     result = result.assign(usage_ratio=result["used_bytes"] / result["requested_bytes"])
     return result.sort_values("usage_ratio", ascending=True).reset_index(drop=True)
