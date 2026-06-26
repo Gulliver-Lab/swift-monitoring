@@ -19,12 +19,6 @@ def format_jobs_table(df: pd.DataFrame) -> str:
         return "No matching jobs"
 
     output = normalize_job_columns(df)
-    if "ended_at" in output.columns:
-        output["date"] = pd.to_datetime(output["ended_at"]).dt.strftime("%Y-%m-%d")
-    elif "started_at" in output.columns:
-        output["date"] = pd.to_datetime(output["started_at"]).dt.strftime("%Y-%m-%d")
-    else:
-        output["date"] = "-"
 
     output = output.rename(
         columns={
@@ -40,8 +34,8 @@ def format_jobs_table(df: pd.DataFrame) -> str:
 
     columns = [
         "user",
-        "date",
-        "job_id",
+        "duration",
+        "id_job",
         "job_name",
         "requested_memory",
         "used_memory",

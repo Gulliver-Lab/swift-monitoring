@@ -4,7 +4,7 @@ import re
 
 import pandas as pd
 
-MEMORY_MIN_BYTES = 500 * 1024**2
+MEMORY_MIN_BYTES = 1000 * 1024**2
 
 JOB_COLUMN_ALIASES = {
     "user": ["user", "user_name"],

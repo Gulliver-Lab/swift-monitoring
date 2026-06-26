@@ -7,6 +7,8 @@ import pandas as pd
 
 from memory_watch.config import db_config
 
+MIN_DURATION_SECOND = 300  # 5 minutes
+
 
 def load_jobs_for_period(start: datetime, end: datetime) -> pd.DataFrame:
     conn = None
@@ -33,7 +35,9 @@ def load_jobs_for_period(start: datetime, end: datetime) -> pd.DataFrame:
         WHERE j.time_end > {start.timestamp()}
           AND j.time_end <= {end.timestamp()}
         """
-        return pd.read_sql_query(query, con=conn)
+        df = pd.read_sql_query(query, con=conn)
+        df["duration"] = df["time_end"] - df["time_start"]
+        return df[df["duration"] > MIN_DURATION_SECOND]
     finally:
         if conn is not None:
             close = getattr(conn, "close", None)
