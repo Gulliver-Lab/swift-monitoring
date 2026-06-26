@@ -1,0 +1,50 @@
+from __future__ import annotations
+
+import re
+
+import pandas as pd
+
+MEMORY_MIN_BYTES = 500 * 1024**2
+
+_MEMORY_UNITS = {
+    "": 1,
+    "B": 1,
+    "K": 1024,
+    "M": 1024**2,
+    "G": 1024**3,
+    "T": 1024**4,
+    "P": 1024**5,
+}
+
+_SLURM_MEMORY_PATTERN = re.compile(r"^\s*(\d+(?:\.\d+)?)([BKMGTP]?)\s*$", re.IGNORECASE)
+
+
+def parse_slurm_memory(value: str | int | float | None) -> int | None:
+    if value is None or value is pd.NA:
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+
+    match = _SLURM_MEMORY_PATTERN.match(str(value))
+    if match is None:
+        return None
+
+    amount = float(match.group(1))
+    unit = match.group(2).upper()
+    return int(amount * _MEMORY_UNITS[unit])
+
+
+def enrich_with_memory_columns(df: pd.DataFrame) -> pd.DataFrame:
+    result = df.copy()
+    result["requested_bytes"] = result["requested_mem"].map(parse_slurm_memory)
+    result["used_bytes"] = result["max_rss"].map(parse_slurm_memory)
+    return result
+
+
+def filter_underused_jobs(df: pd.DataFrame) -> pd.DataFrame:
+    result = df.copy()
+    result = result.dropna(subset=["requested_bytes", "used_bytes"])
+    result = result[result["requested_bytes"] >= MEMORY_MIN_BYTES]
+    result = result[result["used_bytes"] <= 0.5 * result["requested_bytes"]]
+    result = result.assign(usage_ratio=result["used_bytes"] / result["requested_bytes"])
+    return result.sort_values("usage_ratio", ascending=True).reset_index(drop=True)
