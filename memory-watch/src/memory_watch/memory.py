@@ -27,16 +27,31 @@ _MEMORY_UNITS = {
 }
 
 _SLURM_MEMORY_PATTERN = re.compile(r"^\s*(\d+(?:\.\d+)?)([BKMGTP]?)\s*$", re.IGNORECASE)
+_NORMALIZE_PATTERN = re.compile(r"[^a-z0-9]+")
+
+
+def _normalize_column_name(name: str) -> str:
+    return _NORMALIZE_PATTERN.sub("", name.casefold())
+
+
+def _resolve_column(df: pd.DataFrame, aliases: list[str]) -> str | None:
+    normalized_lookup = {
+        _normalize_column_name(column): column for column in df.columns
+    }
+    for alias in aliases:
+        column = normalized_lookup.get(_normalize_column_name(alias))
+        if column is not None:
+            return column
+    return None
 
 
 def normalize_job_columns(df: pd.DataFrame) -> pd.DataFrame:
     result = df.copy()
     rename: dict[str, str] = {}
     for canonical, aliases in JOB_COLUMN_ALIASES.items():
-        for alias in aliases:
-            if alias in result.columns:
-                rename[alias] = canonical
-                break
+        column = _resolve_column(result, aliases)
+        if column is not None:
+            rename[column] = canonical
     return result.rename(columns=rename)
 
 
@@ -57,8 +72,14 @@ def parse_slurm_memory(value: str | int | float | None) -> int | None:
 
 def enrich_with_memory_columns(df: pd.DataFrame) -> pd.DataFrame:
     result = normalize_job_columns(df)
-    result["requested_bytes"] = result["requested_mem"].map(parse_slurm_memory)
-    result["used_bytes"] = result["max_rss"].map(parse_slurm_memory)
+    requested_column = _resolve_column(result, JOB_COLUMN_ALIASES["requested_mem"])
+    used_column = _resolve_column(result, JOB_COLUMN_ALIASES["max_rss"])
+    if requested_column is None:
+        raise KeyError("Missing requested memory column")
+    if used_column is None:
+        raise KeyError("Missing used memory column")
+    result["requested_bytes"] = result[requested_column].map(parse_slurm_memory)
+    result["used_bytes"] = result[used_column].map(parse_slurm_memory)
     return result
 
 

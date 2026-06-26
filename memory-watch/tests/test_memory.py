@@ -29,3 +29,10 @@ def test_enrich_with_memory_columns_parses_requested_and_used_memory():
     result = enrich_with_memory_columns(df)
     assert result.iloc[0]["requested_bytes"] == 1024**3
     assert result.iloc[0]["used_bytes"] == 400 * 1024**2
+
+
+def test_enrich_with_memory_columns_handles_slurm_casing():
+    df = pd.DataFrame([{"ReqMem": "1G", "MaxRSS": "400M"}])
+    result = enrich_with_memory_columns(df)
+    assert result.iloc[0]["requested_bytes"] == 1024**3
+    assert result.iloc[0]["used_bytes"] == 400 * 1024**2
