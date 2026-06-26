@@ -12,7 +12,7 @@ The tool will:
 - query the Slurm accounting DB for jobs in that interval
 - compare requested memory against peak used memory at the job level
 - flag jobs where:
-  - requested memory is at least 250 MiB
+  - requested memory is at least 500 MiB
   - peak used memory is at most 50% of requested memory
 - print a terminal table with basic job metadata
 
@@ -100,7 +100,7 @@ Rules:
 Threshold rule:
 
 - a job is flagged when `used_bytes <= 0.5 * requested_bytes`
-- but only if `requested_bytes >= 250 * 1024 * 1024`
+- but only if `requested_bytes >= 500 * 1024 * 1024`
 
 This means small jobs are intentionally ignored even when they show large
 relative underuse.
@@ -179,4 +179,3 @@ The work is complete when:
 - the program queries the Slurm accounting DB
 - the program prints jobs that satisfy the agreed underuse rule
 - the implementation is separate from `usage-reports`
-
