@@ -36,3 +36,24 @@ def test_enrich_with_memory_columns_handles_slurm_casing():
     result = enrich_with_memory_columns(df)
     assert result.iloc[0]["requested_bytes"] == 1024**3
     assert result.iloc[0]["used_bytes"] == 400 * 1024**2
+
+
+def test_enrich_with_memory_columns_handles_tres_request_strings():
+    df = pd.DataFrame([{"ReqTRES": "cpu=2,mem=1G,node=1", "MaxRSS": "400M"}])
+    result = enrich_with_memory_columns(df)
+    assert result.iloc[0]["requested_bytes"] == 1024**3
+    assert result.iloc[0]["used_bytes"] == 400 * 1024**2
+
+
+def test_enrich_with_memory_columns_handles_suffixed_rss_columns():
+    df = pd.DataFrame([{"ReqMem": "1G", "MaxRSSNode": "400M"}])
+    result = enrich_with_memory_columns(df)
+    assert result.iloc[0]["requested_bytes"] == 1024**3
+    assert result.iloc[0]["used_bytes"] == 400 * 1024**2
+
+
+def test_enrich_with_memory_columns_handles_rss_like_columns():
+    df = pd.DataFrame([{"ReqMem": "1G", "PeakRSS": "400M"}])
+    result = enrich_with_memory_columns(df)
+    assert result.iloc[0]["requested_bytes"] == 1024**3
+    assert result.iloc[0]["used_bytes"] == 400 * 1024**2

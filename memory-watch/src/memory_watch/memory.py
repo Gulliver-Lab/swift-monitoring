@@ -12,8 +12,15 @@ JOB_COLUMN_ALIASES = {
     "job_id": ["job_id", "jobid"],
     "started_at": ["started_at", "time_start"],
     "ended_at": ["ended_at", "time_end"],
-    "requested_mem": ["requested_mem", "reqmem", "req_mem"],
-    "max_rss": ["max_rss", "maxrss"],
+    "requested_mem": [
+        "requested_mem",
+        "reqmem",
+        "req_mem",
+        "reqtres",
+        "req_tres",
+        "tres_req",
+    ],
+    "max_rss": ["max_rss", "maxrss", "tres_usage_in_max"],
 }
 
 _MEMORY_UNITS = {
@@ -26,7 +33,10 @@ _MEMORY_UNITS = {
     "P": 1024**5,
 }
 
-_SLURM_MEMORY_PATTERN = re.compile(r"^\s*(\d+(?:\.\d+)?)([BKMGTP]?)\s*$", re.IGNORECASE)
+_SLURM_MEMORY_PATTERN = re.compile(
+    r"^\s*(\d+(?:\.\d+)?)([BKMGTP]?)(?:[a-zA-Z]*)\s*$", re.IGNORECASE
+)
+_TRES_MEMORY_PATTERN = re.compile(r"(?:^|[, ])mem=([^, ]+)", re.IGNORECASE)
 _NORMALIZE_PATTERN = re.compile(r"[^a-z0-9]+")
 
 
@@ -39,9 +49,40 @@ def _resolve_column(df: pd.DataFrame, aliases: list[str]) -> str | None:
         _normalize_column_name(column): column for column in df.columns
     }
     for alias in aliases:
-        column = normalized_lookup.get(_normalize_column_name(alias))
+        normalized_alias = _normalize_column_name(alias)
+        column = normalized_lookup.get(normalized_alias)
         if column is not None:
             return column
+        for normalized_column, original_column in normalized_lookup.items():
+            if (
+                normalized_alias in normalized_column
+                or normalized_column in normalized_alias
+            ):
+                return original_column
+    return None
+
+
+def _resolve_requested_column(df: pd.DataFrame) -> str | None:
+    column = _resolve_column(df, JOB_COLUMN_ALIASES["requested_mem"])
+    if column is not None:
+        return column
+
+    for original_column in df.columns:
+        normalized = _normalize_column_name(original_column)
+        if "req" in normalized and ("mem" in normalized or "tres" in normalized):
+            return original_column
+    return None
+
+
+def _resolve_used_column(df: pd.DataFrame) -> str | None:
+    column = _resolve_column(df, JOB_COLUMN_ALIASES["max_rss"])
+    if column is not None:
+        return column
+
+    for original_column in df.columns:
+        normalized = _normalize_column_name(original_column)
+        if "rss" in normalized and ("max" in normalized or "peak" in normalized):
+            return original_column
     return None
 
 
@@ -70,16 +111,29 @@ def parse_slurm_memory(value: str | int | float | None) -> int | None:
     return int(amount * _MEMORY_UNITS[unit])
 
 
+def _parse_memory_cell(value: object) -> int | None:
+    if value is None or value is pd.NA:
+        return None
+    text = str(value)
+    tres_match = _TRES_MEMORY_PATTERN.search(text)
+    if tres_match is not None:
+        return parse_slurm_memory(tres_match.group(1))
+    return parse_slurm_memory(text)
+
+
 def enrich_with_memory_columns(df: pd.DataFrame) -> pd.DataFrame:
     result = normalize_job_columns(df)
-    requested_column = _resolve_column(result, JOB_COLUMN_ALIASES["requested_mem"])
-    used_column = _resolve_column(result, JOB_COLUMN_ALIASES["max_rss"])
+    requested_column = _resolve_requested_column(result)
+    used_column = _resolve_used_column(result)
     if requested_column is None:
         raise KeyError("Missing requested memory column")
     if used_column is None:
-        raise KeyError("Missing used memory column")
-    result["requested_bytes"] = result[requested_column].map(parse_slurm_memory)
-    result["used_bytes"] = result[used_column].map(parse_slurm_memory)
+        raise KeyError(
+            "Missing used memory column; available columns: "
+            f"{', '.join(map(str, result.columns))}"
+        )
+    result["requested_bytes"] = result[requested_column].map(_parse_memory_cell)
+    result["used_bytes"] = result[used_column].map(_parse_memory_cell)
     return result
 
 
