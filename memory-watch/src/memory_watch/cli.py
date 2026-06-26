@@ -27,6 +27,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     start = datetime.combine(_parse_date(args.start).date(), time.min)
     end = datetime.combine(_parse_date(args.end).date(), time.max)
     jobs = load_jobs_for_period(start, end)
+    print(f"found {len(jobs)} jobs")
     jobs = enrich_with_memory_columns(jobs)
     jobs = filter_underused_jobs(jobs)
     print(format_jobs_table(jobs))

@@ -127,10 +127,9 @@ def _parse_memory_cell(value: object) -> int | None:
     if value is None or value is pd.NA:
         return None
     text = str(value)
-    tres_match = _TRES_MEMORY_PATTERN.search(text)
-    if tres_match is not None:
-        return parse_slurm_memory(tres_match.group(1))
-    return parse_slurm_memory(text)
+    if text == "":
+        return None
+    return float(text.split(",")[1].split("=")[1])
 
 
 def _parse_requested_memory(value: object) -> int | None:
@@ -154,7 +153,7 @@ def enrich_with_memory_columns(df: pd.DataFrame) -> pd.DataFrame:
             "Missing used memory column; available columns: "
             f"{', '.join(map(str, result.columns))}"
         )
-    result["requested_bytes"] = result[requested_column].map(_parse_requested_memory)
+    result["requested_bytes"] = result[requested_column] * 1024**2
     result["used_bytes"] = result[used_column].map(_parse_memory_cell)
     return result
 
