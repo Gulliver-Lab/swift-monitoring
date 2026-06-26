@@ -15,7 +15,7 @@ def load_jobs_for_period(start: datetime, end: datetime) -> pd.DataFrame:
         query = f"""
         SELECT
             j.id_job,
-            u.name AS `user`,
+            a.user AS `user`,
             j.job_name,
             j.time_start,
             j.time_end,
@@ -25,8 +25,8 @@ def load_jobs_for_period(start: datetime, end: datetime) -> pd.DataFrame:
             s.tres_usage_in_max_nodeid,
             s.tres_usage_in_max_taskid
         FROM default_job_table AS j
-        INNER JOIN user_table AS u
-            ON j.id_user = u.id_user
+        INNER JOIN default_assoc_table AS a
+            ON j.id_assoc = a.id_assoc
         INNER JOIN default_step_table AS s
             ON j.job_db_inx = s.job_db_inx
            AND s.id_step = -5
