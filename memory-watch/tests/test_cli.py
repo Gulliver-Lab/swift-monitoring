@@ -16,13 +16,13 @@ def test_main_renders_a_report(monkeypatch, capsys):
         lambda start, end: pd.DataFrame(
             [
                 {
-                    "user_name": "alice",
+                    "user": "alice",
                     "job_name": "job",
                     "job_id": 42,
                     "started_at": "2026-06-01",
                     "ended_at": "2026-06-01",
-                    "requested_mem": "1G",
-                    "max_rss": "400M",
+                    "mem_req": "1G",
+                    "tres_usage_in_max": "400M",
                 }
             ]
         ),

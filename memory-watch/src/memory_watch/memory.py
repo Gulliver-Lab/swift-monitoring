@@ -12,15 +12,19 @@ JOB_COLUMN_ALIASES = {
     "job_id": ["job_id", "jobid"],
     "started_at": ["started_at", "time_start"],
     "ended_at": ["ended_at", "time_end"],
-    "requested_mem": [
-        "requested_mem",
-        "reqmem",
-        "req_mem",
-        "reqtres",
-        "req_tres",
-        "tres_req",
+    "requested_mem": ["requested_mem", "mem_req", "reqmem", "req_mem"],
+    "tres_req": ["tres_req", "reqtres", "req_tres"],
+    "tres_usage_in_max": [
+        "tres_usage_in_max",
+        "max_rss",
+        "maxrss",
+        "max_rss_node",
+        "max_rss_task",
+        "peak_rss",
+        "peakrss",
+        "rss_max",
+        "rssmax",
     ],
-    "max_rss": ["max_rss", "maxrss", "tres_usage_in_max"],
 }
 
 _MEMORY_UNITS = {
@@ -67,21 +71,29 @@ def _resolve_requested_column(df: pd.DataFrame) -> str | None:
     if column is not None:
         return column
 
+    tres_column = _resolve_column(df, JOB_COLUMN_ALIASES["tres_req"])
+    if tres_column is not None:
+        return tres_column
+
     for original_column in df.columns:
         normalized = _normalize_column_name(original_column)
-        if "req" in normalized and ("mem" in normalized or "tres" in normalized):
+        if "reqtres" == normalized:
             return original_column
     return None
 
 
 def _resolve_used_column(df: pd.DataFrame) -> str | None:
-    column = _resolve_column(df, JOB_COLUMN_ALIASES["max_rss"])
+    column = _resolve_column(df, JOB_COLUMN_ALIASES["tres_usage_in_max"])
     if column is not None:
         return column
 
     for original_column in df.columns:
         normalized = _normalize_column_name(original_column)
-        if "rss" in normalized and ("max" in normalized or "peak" in normalized):
+        if (
+            "tresusageinmax" in normalized
+            or "maxrss" in normalized
+            or "peakrss" in normalized
+        ):
             return original_column
     return None
 
@@ -121,6 +133,16 @@ def _parse_memory_cell(value: object) -> int | None:
     return parse_slurm_memory(text)
 
 
+def _parse_requested_memory(value: object) -> int | None:
+    if value is None or value is pd.NA:
+        return None
+    text = str(value)
+    tres_match = _TRES_MEMORY_PATTERN.search(text)
+    if tres_match is not None:
+        return parse_slurm_memory(tres_match.group(1))
+    return parse_slurm_memory(text)
+
+
 def enrich_with_memory_columns(df: pd.DataFrame) -> pd.DataFrame:
     result = normalize_job_columns(df)
     requested_column = _resolve_requested_column(result)
@@ -132,7 +154,7 @@ def enrich_with_memory_columns(df: pd.DataFrame) -> pd.DataFrame:
             "Missing used memory column; available columns: "
             f"{', '.join(map(str, result.columns))}"
         )
-    result["requested_bytes"] = result[requested_column].map(_parse_memory_cell)
+    result["requested_bytes"] = result[requested_column].map(_parse_requested_memory)
     result["used_bytes"] = result[used_column].map(_parse_memory_cell)
     return result
 

@@ -25,35 +25,37 @@ def test_filter_underused_jobs_applies_500m_and_50_percent_rule():
 
 
 def test_enrich_with_memory_columns_parses_requested_and_used_memory():
-    df = pd.DataFrame([{"requested_mem": "1G", "max_rss": "400M"}])
+    df = pd.DataFrame([{"mem_req": "1G", "tres_usage_in_max": "400M"}])
     result = enrich_with_memory_columns(df)
     assert result.iloc[0]["requested_bytes"] == 1024**3
     assert result.iloc[0]["used_bytes"] == 400 * 1024**2
 
 
 def test_enrich_with_memory_columns_handles_slurm_casing():
-    df = pd.DataFrame([{"ReqMem": "1G", "MaxRSS": "400M"}])
+    df = pd.DataFrame([{"ReqMem": "1G", "Tres_Usage_In_Max": "400M"}])
     result = enrich_with_memory_columns(df)
     assert result.iloc[0]["requested_bytes"] == 1024**3
     assert result.iloc[0]["used_bytes"] == 400 * 1024**2
 
 
 def test_enrich_with_memory_columns_handles_tres_request_strings():
-    df = pd.DataFrame([{"ReqTRES": "cpu=2,mem=1G,node=1", "MaxRSS": "400M"}])
+    df = pd.DataFrame(
+        [{"tres_req": "cpu=2,mem=1G,node=1", "tres_usage_in_max": "400M"}]
+    )
     result = enrich_with_memory_columns(df)
     assert result.iloc[0]["requested_bytes"] == 1024**3
     assert result.iloc[0]["used_bytes"] == 400 * 1024**2
 
 
 def test_enrich_with_memory_columns_handles_suffixed_rss_columns():
-    df = pd.DataFrame([{"ReqMem": "1G", "MaxRSSNode": "400M"}])
+    df = pd.DataFrame([{"mem_req": "1G", "tres_usage_in_max_nodeid": "400M"}])
     result = enrich_with_memory_columns(df)
     assert result.iloc[0]["requested_bytes"] == 1024**3
     assert result.iloc[0]["used_bytes"] == 400 * 1024**2
 
 
 def test_enrich_with_memory_columns_handles_rss_like_columns():
-    df = pd.DataFrame([{"ReqMem": "1G", "PeakRSS": "400M"}])
+    df = pd.DataFrame([{"mem_req": "1G", "peakrss": "400M"}])
     result = enrich_with_memory_columns(df)
     assert result.iloc[0]["requested_bytes"] == 1024**3
     assert result.iloc[0]["used_bytes"] == 400 * 1024**2

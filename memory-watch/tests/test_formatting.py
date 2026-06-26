@@ -7,7 +7,7 @@ def test_format_jobs_table_includes_expected_values():
     df = pd.DataFrame(
         [
             {
-                "user_name": "alice",
+                "user": "alice",
                 "job_name": "test",
                 "job_id": 42,
                 "ended_at": "2026-06-01",

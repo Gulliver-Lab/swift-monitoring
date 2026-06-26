@@ -21,13 +21,14 @@ def test_load_jobs_for_period_uses_expected_query(monkeypatch):
         return pd.DataFrame(
             [
                 {
-                    "user_name": "alice",
+                    "user": "alice",
                     "job_name": "job",
                     "job_id": 42,
                     "started_at": 1717200000,
                     "ended_at": 1717286400,
-                    "requested_mem": "1G",
-                    "max_rss": "400M",
+                    "mem_req": "1G",
+                    "tres_req": "cpu=2,mem=1G,node=1",
+                    "tres_usage_in_max": "1=25,2=6369280,3=0,6=0,7=0,8=0",
                 }
             ]
         )
@@ -40,11 +41,12 @@ def test_load_jobs_for_period_uses_expected_query(monkeypatch):
     assert captured["connection"].__class__.__name__ == "FakeConnection"
     assert "FROM" in captured["query"].upper()
     assert list(df.columns) == [
-        "user_name",
+        "user",
         "job_name",
         "job_id",
         "started_at",
         "ended_at",
-        "requested_mem",
-        "max_rss",
+        "mem_req",
+        "tres_req",
+        "tres_usage_in_max",
     ]
