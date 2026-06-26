@@ -32,6 +32,8 @@ def format_jobs_table(df: pd.DataFrame) -> str:
         lambda value: "-" if pd.isna(value) else f"{float(value):.2f}"
     )
 
+    output.drop_duplicates(subset=["user", "job_name", "usage_ratio"])
+
     columns = [
         "user",
         "duration",
