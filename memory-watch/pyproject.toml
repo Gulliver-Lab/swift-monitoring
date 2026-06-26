@@ -1,0 +1,47 @@
+[project]
+name = "memory-watch"
+version = "0.1.0"
+description = "Find Slurm jobs that used far less memory than requested"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "mariadb>=1.1.14",
+    "pandas>=3.0.2",
+]
+
+[project.scripts]
+memory-watch = "memory_watch.cli:main"
+
+[dependency-groups]
+dev = [
+    "mypy",
+    "pandas-stubs>=2.3.3.251201",
+    "pytest",
+    "ruff",
+    "taskipy",
+]
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.mypy]
+exclude = ["build"]
+
+[[tool.mypy.overrides]]
+module = ["mariadb"]
+ignore_missing_imports = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.taskipy.tasks]
+format = "ruff format ."
+lint = "ruff check . --fix"
+check-formatting = "ruff format --check ."
+check-linting = "ruff check --select I ."
+check-typing = "mypy ."
+all = "task format && task lint && task check-typing"
