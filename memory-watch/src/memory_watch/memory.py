@@ -11,7 +11,7 @@ def _parse_memory_cell(value: object) -> int | None:
     text = str(value)
     if text == "":
         return None
-    return float(text.split(",")[1].split("=")[1])
+    return int(text.split(",")[1].split("=")[1])
 
 
 def enrich_with_memory_columns(df: pd.DataFrame) -> pd.DataFrame:
