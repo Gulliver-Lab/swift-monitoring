@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import pandas as pd
 
-from memory_watch.memory import normalize_job_columns
-
 
 def format_bytes(value: int | float | None) -> str:
     if value is None or pd.isna(value):
@@ -47,11 +45,7 @@ def format_jobs_table(df: pd.DataFrame) -> str:
     if df.empty:
         return "No matching jobs"
 
-    output = (
-        normalize_job_columns(df)
-        .sort_values(by="over_provision")
-        .reset_index(drop=True)
-    )
+    output = df.sort_values(by="over_provision").reset_index(drop=True)
 
     output = output.rename(
         columns={
