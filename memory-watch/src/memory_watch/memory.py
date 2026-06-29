@@ -143,18 +143,10 @@ def _parse_requested_memory(value: object) -> int | None:
 
 
 def enrich_with_memory_columns(df: pd.DataFrame) -> pd.DataFrame:
-    result = normalize_job_columns(df)
-    requested_column = _resolve_requested_column(result)
-    used_column = _resolve_used_column(result)
-    if requested_column is None:
-        raise KeyError("Missing requested memory column")
-    if used_column is None:
-        raise KeyError(
-            "Missing used memory column; available columns: "
-            f"{', '.join(map(str, result.columns))}"
-        )
-    result["requested_bytes"] = result[requested_column] * 1024**2
-    result["used_bytes"] = result[used_column].map(_parse_memory_cell)
+    result = df.copy()
+
+    result["requested_bytes"] = result["mem_req"] * 1024**2
+    result["used_bytes"] = result["tres_usage_in_max"].map(_parse_memory_cell)
     result["over_provision"] = result["requested_bytes"] - result["used_bytes"]
     return result
 
