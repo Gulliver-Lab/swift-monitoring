@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import pandas as pd
 
-from memory_watch.memory import normalize_job_columns
-
 
 def format_bytes(value: int | float | None) -> str:
     if value is None or pd.isna(value):
@@ -47,21 +45,7 @@ def format_jobs_table(df: pd.DataFrame) -> str:
     if df.empty:
         return "No matching jobs"
 
-    output = (
-        normalize_job_columns(df)
-        .sort_values(by="over_provision")
-        .reset_index(drop=True)
-    )
-
-    if "duration" not in output.columns:
-        if {"time_start", "time_end"}.issubset(output.columns):
-            output["duration"] = output["time_end"] - output["time_start"]
-        elif {"started_at", "ended_at"}.issubset(output.columns):
-            started = _to_datetime(output["started_at"])
-            ended = _to_datetime(output["ended_at"])
-            output["duration"] = (ended - started).dt.total_seconds()
-        else:
-            output["duration"] = pd.NA
+    output = df.sort_values(by="over_provision").reset_index(drop=True)
 
     output = output.rename(
         columns={

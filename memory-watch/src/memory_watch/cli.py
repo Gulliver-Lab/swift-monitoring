@@ -26,6 +26,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     start = datetime.combine(_parse_date(args.start).date(), time.min)
     end = datetime.combine(_parse_date(args.end).date(), time.max)
+
     jobs = load_jobs_for_period(start, end)
     print(f"found {len(jobs)} jobs")
     jobs = enrich_with_memory_columns(jobs)
