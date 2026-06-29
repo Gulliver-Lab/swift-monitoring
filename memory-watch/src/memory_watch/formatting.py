@@ -53,16 +53,6 @@ def format_jobs_table(df: pd.DataFrame) -> str:
         .reset_index(drop=True)
     )
 
-    if "duration" not in output.columns:
-        if {"time_start", "time_end"}.issubset(output.columns):
-            output["duration"] = output["time_end"] - output["time_start"]
-        elif {"started_at", "ended_at"}.issubset(output.columns):
-            started = _to_datetime(output["started_at"])
-            ended = _to_datetime(output["ended_at"])
-            output["duration"] = (ended - started).dt.total_seconds()
-        else:
-            output["duration"] = pd.NA
-
     output = output.rename(
         columns={
             "requested_bytes": "requested_memory",
