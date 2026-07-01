@@ -3,7 +3,12 @@ from datetime import datetime, time, timedelta
 import pandas as pd
 
 from reports.data import get_raw_data_for_time_period
-from reports.settings import cpus_per_partition, gpu_per_node, id_qos_name
+from reports.settings import (
+    cpus_per_partition,
+    gpu_per_node,
+    id_qos_name,
+    ram_per_partition_gb,
+)
 from reports.utils import trim_df_between_dates
 
 
@@ -18,6 +23,19 @@ def get_available_cpu_for_period(
     )
     df_cpu["available"] = df_cpu["CPUs"] * seconds_for_this_period
     return df_cpu[["partition", "available"]]
+
+
+def get_available_ram_for_period(
+    start_date: datetime, end_date: datetime
+) -> pd.DataFrame:
+    seconds_for_this_period = (end_date - start_date).total_seconds()
+    df_ram = (
+        pd.DataFrame([ram_per_partition_gb])
+        .T.reset_index()
+        .rename(columns={0: "RAM", "index": "partition"})
+    )
+    df_ram["available"] = df_ram["RAM"] * seconds_for_this_period
+    return df_ram[["partition", "available"]]
 
 
 def get_available_gpu_for_period(
