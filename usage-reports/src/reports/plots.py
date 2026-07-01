@@ -109,20 +109,26 @@ def draw_hbar(ax, names, values, total_val, color: str, title: str):
         spine.set_edgecolor(BORDER)
 
 
-def draw_bar_ts(ax, ts: pd.DataFrame):
+def draw_partition_bar_ts(
+    ax,
+    ts: pd.DataFrame,
+    partition: str,
+    all_dates: list[pd.Timestamp],
+    show_legend: bool,
+):
     """
-    Grouped bar chart: CPU, RAM, and GPU bars per day, side by side.
+    Grouped bar chart: CPU, RAM, and GPU bars per day for one partition.
     Weekend days get a clearly shaded background column.
     """
-    cpu = ts[ts["Ressource"] == "CPU"].set_index("date")["load"]
-    mem = ts[ts["Ressource"] == "RAM"].set_index("date")["load"]
-    gpu = ts[ts["Ressource"] == "GPU"].set_index("date")["load"]
+    ts_partition = ts[ts["partition"] == partition]
+    cpu = ts_partition[ts_partition["Ressource"] == "CPU"].set_index("date")["load"]
+    mem = ts_partition[ts_partition["Ressource"] == "RAM"].set_index("date")["load"]
+    gpu = ts_partition[ts_partition["Ressource"] == "GPU"].set_index("date")["load"]
 
-    idx = sorted(set(cpu.index) | set(mem.index) | set(gpu.index))
-    cpu = cpu.reindex(idx)
-    mem = mem.reindex(idx)
-    gpu = gpu.reindex(idx)
-    xdates = pd.to_datetime(idx)
+    cpu = cpu.reindex(all_dates).fillna(0)
+    mem = mem.reindex(all_dates).fillna(0)
+    gpu = gpu.reindex(all_dates).fillna(0)
+    xdates = pd.to_datetime(all_dates)
     x = np.arange(len(xdates))
     w = 0.26  # width of each bar
 
@@ -140,7 +146,7 @@ def draw_bar_ts(ax, ts: pd.DataFrame):
     # ── CPU bars ───────────────────────────────────────────────────────────────
     ax.bar(
         x - w,
-        cpu.fillna(0) * 100,
+        cpu * 100,
         width=w,
         color=ACCENT_CPU,
         alpha=0.80,
@@ -152,7 +158,7 @@ def draw_bar_ts(ax, ts: pd.DataFrame):
     # ── RAM bars ───────────────────────────────────────────────────────────────
     ax.bar(
         x,
-        mem.fillna(0) * 100,
+        mem * 100,
         width=w,
         color=ACCENT_MEM,
         alpha=0.80,
@@ -164,7 +170,7 @@ def draw_bar_ts(ax, ts: pd.DataFrame):
     # ── GPU bars ───────────────────────────────────────────────────────────────
     ax.bar(
         x + w,
-        gpu.fillna(0) * 100,
+        gpu * 100,
         width=w,
         color=ACCENT_GPU,
         alpha=0.80,
@@ -172,6 +178,13 @@ def draw_bar_ts(ax, ts: pd.DataFrame):
         zorder=3,
         label="GPU",
     )
+
+    for values, color in (
+        (cpu, ACCENT_CPU),
+        (mem, ACCENT_MEM),
+        (gpu, ACCENT_GPU),
+    ):
+        ax.axhline(values.mean() * 100, color=color, lw=1.7, linestyle="--", zorder=4)
 
     # ── Axes formatting ────────────────────────────────────────────────────────
     ax.set_xlim(-0.7, len(x) - 0.3)
@@ -183,7 +196,7 @@ def draw_bar_ts(ax, ts: pd.DataFrame):
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda v, _: f"{v:.0f}%"))
     ax.set_ylabel("Load (%)", fontsize=8, labelpad=5)
     ax.set_title(
-        "Daily average load",
+        f"{partition} — daily load",
         fontsize=10,
         fontweight="bold",
         pad=8,
@@ -193,6 +206,9 @@ def draw_bar_ts(ax, ts: pd.DataFrame):
     ax.tick_params(axis="both", length=0)
     for spine in ax.spines.values():
         spine.set_edgecolor(BORDER)
+
+    if not show_legend:
+        return
 
     we_patch = mpatches.Patch(
         facecolor=WEEKEND_BG, edgecolor=WEEKEND_LN, label="Weekend"
@@ -207,6 +223,7 @@ def draw_bar_ts(ax, ts: pd.DataFrame):
             mpatches.Patch(color=ACCENT_CPU, label="CPU"),
             mpatches.Patch(color=ACCENT_MEM, label="RAM"),
             mpatches.Patch(color=ACCENT_GPU, label="GPU"),
+            mpl.lines.Line2D([], [], color=TEXT_SEC, linestyle="--", label="Time avg"),
             we_patch,
         ],
     )
@@ -286,17 +303,20 @@ def build_report(
     sep.set_facecolor(ACCENT_CPU)
     sep.axis("off")
 
-    # ── Outer grid: top row (resource splits) + bottom row (timeseries) ──────
+    partitions = cpu_parts["partition"].tolist()
+    ts_dates = sorted(pd.to_datetime(ts_df["date"]).unique())
+
+    # ── Outer grid: top row (resource splits) + partition timeseries ─────────
     outer = gridspec.GridSpec(
-        2,
+        1 + len(partitions),
         1,
         figure=fig,
         left=0.04,
         right=0.98,
-        top=0.90,
+        top=0.875,
         bottom=0.06,
-        hspace=0.50,
-        height_ratios=[1, 1.15],
+        hspace=0.58,
+        height_ratios=[1, *([0.72] * len(partitions))],
     )
 
     # Top row split evenly: CPU | RAM | GPU
@@ -306,7 +326,10 @@ def build_report(
     cpu_bar_ax = fig.add_subplot(top_gs[0])
     mem_bar_ax = fig.add_subplot(top_gs[1])
     gpu_bar_ax = fig.add_subplot(top_gs[2])
-    ts_ax = fig.add_subplot(outer[1])
+    ts_axes = [
+        fig.add_subplot(outer[i + 1])
+        for i, _partition in enumerate(partitions)
+    ]
 
     draw_hbar(
         cpu_bar_ax,
@@ -335,7 +358,14 @@ def build_report(
         "GPU — per device type",
     )
 
-    draw_bar_ts(ts_ax, ts_df)
+    for i, (partition, ts_ax) in enumerate(zip(partitions, ts_axes)):
+        draw_partition_bar_ts(
+            ts_ax,
+            ts_df,
+            partition,
+            ts_dates,
+            show_legend=i == 0,
+        )
 
     # ── Dividers between CPU, RAM, and GPU panels ─────────────────────────────
     top_pos = outer[0].get_position(fig)
