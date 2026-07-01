@@ -8,7 +8,8 @@ db_config = {
     "port": int(os.getenv("MARIADB_PORT", default=3306)),
 }
 
-cpus_per_partition = {"ludocpu": 512, "newcpu": 480, "oldcpu": 528}
+# oldcpu is 508 w/ node8, 480 w/o
+cpus_per_partition = {"ludocpu": 512, "newcpu": 480, "oldcpu": 480}
 gpu_per_node = {
     "node5": "RTX",
     "node7": "V100",
