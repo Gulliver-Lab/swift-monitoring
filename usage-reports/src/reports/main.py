@@ -17,6 +17,8 @@ if __name__ == "__main__":
     # Set the end of the day for this one
     end_date = datetime.combine(end_date, time(23, 59))
 
-    cpu_df, gpu_df, ts_df = metrics.generate_metrics_for_period(start_date, end_date)
+    cpu_df, mem_df, gpu_df, ts_df = metrics.generate_metrics_for_period(
+        start_date, end_date
+    )
 
-    plots.build_report(cpu_df, gpu_df, ts_df, args.output)
+    plots.build_report(cpu_df, mem_df, gpu_df, ts_df, args.output)

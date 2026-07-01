@@ -3,7 +3,12 @@ from datetime import datetime, time, timedelta
 import pandas as pd
 
 from reports.data import get_raw_data_for_time_period
-from reports.settings import cpus_per_partition, gpu_per_node, id_qos_name
+from reports.settings import (
+    cpus_per_partition,
+    gpu_per_node,
+    id_qos_name,
+    ram_per_partition_mb,
+)
 from reports.utils import trim_df_between_dates
 
 
@@ -18,6 +23,19 @@ def get_available_cpu_for_period(
     )
     df_cpu["available"] = df_cpu["CPUs"] * seconds_for_this_period
     return df_cpu[["partition", "available"]]
+
+
+def get_available_mem_for_period(
+    start_date: datetime, end_date: datetime
+) -> pd.DataFrame:
+    seconds_for_this_period = (end_date - start_date).total_seconds()
+    df_mem = (
+        pd.DataFrame([ram_per_partition_mb])
+        .T.reset_index()
+        .rename(columns={0: "MEM", "index": "partition"})
+    )
+    df_mem["available"] = df_mem["MEM"] * seconds_for_this_period
+    return df_mem[["partition", "available"]]
 
 
 def get_available_gpu_for_period(
@@ -52,6 +70,36 @@ def get_cpu_load(
         .rename("consumption")
         .reset_index()
         .merge(get_available_cpu_for_period(start_date, end_date), how="right")
+        .fillna(0)
+    )
+    vals = dict(df_usage_partition.sum())
+    vals["partition"] = "total"
+    df_usage_partition = pd.concat([df_usage_partition, pd.DataFrame([vals])])
+
+    df_usage_partition["load"] = (
+        df_usage_partition["consumption"] / df_usage_partition["available"]
+    )
+
+    return df_usage_partition[["partition", "load"]]
+
+
+def get_mem_load(
+    ddf: pd.DataFrame, start_date: datetime, end_date: datetime
+) -> pd.DataFrame:
+    ddf = ddf.copy()
+    if ddf.empty:
+        return pd.DataFrame()
+
+    ddf["required_mem"] = ddf["tres_req"].apply(
+        lambda x: float(x.split(",")[1].split("=")[1])
+    )
+    ddf["consumption"] = ddf["duration"] * ddf["required_mem"]
+    df_usage_partition = (
+        ddf.groupby(["partition"])
+        .apply(lambda x: sum(x["consumption"]))
+        .rename("consumption")
+        .reset_index()
+        .merge(get_available_mem_for_period(start_date, end_date), how="right")
         .fillna(0)
     )
     vals = dict(df_usage_partition.sum())
@@ -124,6 +172,7 @@ def generate_metrics_for_period(start_date: datetime, end_date: datetime):
     # print_usage_fraction_per_qos(df)
     # For the whole duration
     df_load_cpu_total = get_cpu_load(df, start_date, end_date)
+    df_load_mem_total = get_mem_load(df, start_date, end_date)
     df_load_gpu_total = get_gpu_load(df, start_date, end_date)
 
     # Then as a timeseries for each day
@@ -137,10 +186,17 @@ def generate_metrics_for_period(start_date: datetime, end_date: datetime):
 
         df_load_cpu = get_cpu_load(ddf, day_start, day_end)
         df_load_cpu["date"] = current_day
+        df_load_cpu["Ressource"] = "CPU"
         df_list.append(df_load_cpu)
+
+        df_load_mem = get_mem_load(ddf, day_start, day_end)
+        df_load_mem["date"] = current_day
+        df_load_mem["Ressource"] = "RAM"
+        df_list.append(df_load_mem)
 
         df_load_gpu = get_gpu_load(ddf, day_start, day_end)
         df_load_gpu["date"] = current_day
+        df_load_gpu["Ressource"] = "GPU"
         df_list.append(df_load_gpu)
 
         current_day += timedelta(days=1)
@@ -150,9 +206,6 @@ def generate_metrics_for_period(start_date: datetime, end_date: datetime):
     df_total_timeseries = df_load_timeseries.query(
         "partition == 'total' or GPU == 'total'"
     )
-    df_total_timeseries["Ressource"] = df_total_timeseries.apply(
-        lambda x: "GPU" if x["GPU"] == "total" else "CPU", axis=1
-    )
     df_total_timeseries.drop(columns=["partition", "GPU"], inplace=True)
 
-    return df_load_cpu_total, df_load_gpu_total, df_total_timeseries
+    return df_load_cpu_total, df_load_mem_total, df_load_gpu_total, df_total_timeseries
