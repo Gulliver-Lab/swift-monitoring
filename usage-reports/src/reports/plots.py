@@ -41,46 +41,6 @@ def pct(v: float) -> str:
     return f"{v * 100:.1f}%"
 
 
-def draw_gauge(ax, value: float, color: str, label: str):
-    """Half-donut gauge."""
-    angles_bg = np.linspace(0, np.pi, 300)
-    ax.plot(
-        np.cos(angles_bg),
-        np.sin(angles_bg),
-        lw=20,
-        color=BORDER,
-        solid_capstyle="round",
-        zorder=1,
-    )
-    if value > 0:
-        angles_v = np.linspace(0, np.pi * value, max(2, int(300 * value)))
-        ax.plot(
-            np.cos(angles_v),
-            np.sin(angles_v),
-            lw=20,
-            color=color,
-            solid_capstyle="round",
-            zorder=2,
-        )
-
-    ax.text(
-        0,
-        0.22,
-        pct(value),
-        ha="center",
-        va="center",
-        fontsize=19,
-        fontweight="bold",
-        color=TEXT_PRI,
-    )
-    ax.text(0, -0.08, label, ha="center", va="center", fontsize=8, color=TEXT_SEC)
-
-    ax.set_xlim(-1.15, 1.15)
-    ax.set_ylim(-0.30, 1.20)
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-
 def draw_hbar(ax, names, values, total_val, color: str, title: str):
     """Horizontal bar chart."""
     n = len(names)
@@ -96,8 +56,30 @@ def draw_hbar(ax, names, values, total_val, color: str, title: str):
     )
 
     # total reference line
+    total_pct = total_val * 100
     ax.axvline(
-        total_val * 100, color=ACCENT_WARN, lw=1.4, linestyle="--", alpha=0.9, zorder=5
+        total_pct, color=ACCENT_WARN, lw=2.0, linestyle="--", alpha=0.95, zorder=5
+    )
+    label_x = total_pct - 1.2 if total_pct > 80 else total_pct + 1.2
+    label_ha = "right" if total_pct > 80 else "left"
+    ax.text(
+        label_x,
+        0.96,
+        f"Total avg\n{pct(total_val)}",
+        transform=ax.get_xaxis_transform(),
+        va="top",
+        ha=label_ha,
+        fontsize=10,
+        fontweight="bold",
+        color=ACCENT_WARN,
+        bbox={
+            "boxstyle": "round,pad=0.28",
+            "facecolor": PANEL,
+            "edgecolor": ACCENT_WARN,
+            "linewidth": 0.9,
+            "alpha": 0.94,
+        },
+        zorder=6,
     )
 
     # value labels
@@ -125,16 +107,6 @@ def draw_hbar(ax, names, values, total_val, color: str, title: str):
     ax.tick_params(axis="both", length=0)
     for spine in ax.spines.values():
         spine.set_edgecolor(BORDER)
-
-    avg_patch = mpatches.Patch(color=ACCENT_WARN, label=f"Total avg: {pct(total_val)}")
-    ax.legend(
-        handles=[avg_patch],
-        fontsize=7.5,
-        loc="lower right",
-        framealpha=0.8,
-        facecolor=PANEL,
-        edgecolor=BORDER,
-    )
 
 
 def draw_bar_ts(ax, ts: pd.DataFrame):
@@ -261,7 +233,7 @@ def build_report(
     mem_parts = mem_df[mem_df["partition"] != "total"]
     gpu_types = gpu_df[gpu_df["GPU"] != "total"]
 
-    fig = plt.figure(figsize=(15, 9.5))
+    fig = plt.figure(figsize=(13, 9.5))
     fig.patch.set_facecolor(BG)
 
     # ── Header ────────────────────────────────────────────────────────────────
@@ -314,7 +286,7 @@ def build_report(
     sep.set_facecolor(ACCENT_CPU)
     sep.axis("off")
 
-    # ── Outer grid: top row (gauges+bars) + bottom row (lollipop) ────────────
+    # ── Outer grid: top row (resource splits) + bottom row (timeseries) ──────
     outer = gridspec.GridSpec(
         2,
         1,
@@ -330,29 +302,11 @@ def build_report(
     # Top row split evenly: CPU | RAM | GPU
     top_gs = gridspec.GridSpecFromSubplotSpec(1, 3, subplot_spec=outer[0], wspace=0.11)
 
-    # Each resource panel: gauge | bar chart
-    cpu_gs = gridspec.GridSpecFromSubplotSpec(
-        1, 2, subplot_spec=top_gs[0], wspace=0.32, width_ratios=[0.9, 1.35]
-    )
-    mem_gs = gridspec.GridSpecFromSubplotSpec(
-        1, 2, subplot_spec=top_gs[1], wspace=0.32, width_ratios=[0.9, 1.35]
-    )
-    gpu_gs = gridspec.GridSpecFromSubplotSpec(
-        1, 2, subplot_spec=top_gs[2], wspace=0.32, width_ratios=[0.9, 1.35]
-    )
-
     # ── Subplots ──────────────────────────────────────────────────────────────
-    gauge_cpu_ax = fig.add_subplot(cpu_gs[0])
-    cpu_bar_ax = fig.add_subplot(cpu_gs[1])
-    gauge_mem_ax = fig.add_subplot(mem_gs[0])
-    mem_bar_ax = fig.add_subplot(mem_gs[1])
-    gauge_gpu_ax = fig.add_subplot(gpu_gs[0])
-    gpu_bar_ax = fig.add_subplot(gpu_gs[1])
+    cpu_bar_ax = fig.add_subplot(top_gs[0])
+    mem_bar_ax = fig.add_subplot(top_gs[1])
+    gpu_bar_ax = fig.add_subplot(top_gs[2])
     ts_ax = fig.add_subplot(outer[1])
-
-    draw_gauge(gauge_cpu_ax, cpu_total, ACCENT_CPU, "Avg CPU load")
-    draw_gauge(gauge_mem_ax, mem_total, ACCENT_MEM, "Avg RAM load")
-    draw_gauge(gauge_gpu_ax, gpu_total, ACCENT_GPU, "Avg GPU load")
 
     draw_hbar(
         cpu_bar_ax,
@@ -387,7 +341,16 @@ def build_report(
     top_pos = outer[0].get_position(fig)
     line_ybot = top_pos.y0 + 0.005
     line_ytop = top_pos.y1 - 0.005
-    for line_x in (0.355, 0.665):
+    axes_positions = [
+        cpu_bar_ax.get_position(),
+        mem_bar_ax.get_position(),
+        gpu_bar_ax.get_position(),
+    ]
+    divider_xs = [
+        (axes_positions[0].x1 + axes_positions[1].x0) / 2,
+        (axes_positions[1].x1 + axes_positions[2].x0) / 2,
+    ]
+    for line_x in divider_xs:
         fig.add_artist(
             mpl.lines.Line2D(
                 [line_x, line_x],
