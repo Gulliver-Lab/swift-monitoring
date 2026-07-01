@@ -186,10 +186,17 @@ def generate_metrics_for_period(start_date: datetime, end_date: datetime):
 
         df_load_cpu = get_cpu_load(ddf, day_start, day_end)
         df_load_cpu["date"] = current_day
+        df_load_cpu["Ressource"] = "CPU"
         df_list.append(df_load_cpu)
+
+        df_load_mem = get_mem_load(ddf, day_start, day_end)
+        df_load_mem["date"] = current_day
+        df_load_mem["Ressource"] = "RAM"
+        df_list.append(df_load_mem)
 
         df_load_gpu = get_gpu_load(ddf, day_start, day_end)
         df_load_gpu["date"] = current_day
+        df_load_gpu["Ressource"] = "GPU"
         df_list.append(df_load_gpu)
 
         current_day += timedelta(days=1)
@@ -199,9 +206,6 @@ def generate_metrics_for_period(start_date: datetime, end_date: datetime):
     df_total_timeseries = df_load_timeseries.query(
         "partition == 'total' or GPU == 'total'"
     )
-    df_total_timeseries["Ressource"] = df_total_timeseries.apply(
-        lambda x: "GPU" if x["GPU"] == "total" else "CPU", axis=1
-    )
     df_total_timeseries.drop(columns=["partition", "GPU"], inplace=True)
 
-    return df_load_cpu_total, df_load_gpu_total, df_total_timeseries
+    return df_load_cpu_total, df_load_mem_total, df_load_gpu_total, df_total_timeseries
