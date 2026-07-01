@@ -313,7 +313,7 @@ def build_report(
         figure=fig,
         left=0.04,
         right=0.98,
-        top=0.90,
+        top=0.875,
         bottom=0.06,
         hspace=0.58,
         height_ratios=[1, *([0.72] * len(partitions))],
