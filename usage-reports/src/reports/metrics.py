@@ -6,6 +6,7 @@ from reports.data import get_raw_data_for_time_period
 from reports.settings import (
     cpus_per_partition,
     gpu_per_node,
+    gpus_per_partition,
     id_qos_name,
     ram_per_partition_mb,
 )
@@ -54,6 +55,52 @@ def get_available_gpu_for_period(
     df_gpu["available"] = df_gpu["index"] * seconds_for_this_period
 
     return df_gpu[["GPU", "available"]]
+
+
+def get_available_gpu_partition_for_period(
+    start_date: datetime, end_date: datetime
+) -> pd.DataFrame:
+    seconds_for_this_period = (end_date - start_date).total_seconds()
+    df_gpu = pd.DataFrame(
+        [
+            {"partition": partition, "GPU": gpu}
+            for partition, gpus in gpus_per_partition.items()
+            for gpu in gpus
+        ]
+    )
+    if df_gpu.empty:
+        return pd.DataFrame(columns=["partition", "GPU", "available"])
+
+    df_gpu = df_gpu.value_counts(["partition", "GPU"]).rename("count").reset_index()
+    df_gpu["available"] = df_gpu["count"] * seconds_for_this_period
+    return df_gpu[["partition", "GPU", "available"]]
+
+
+def map_gpu_load_to_partitions(
+    df_gpu_load: pd.DataFrame, start_date: datetime, end_date: datetime
+) -> pd.DataFrame:
+    df_gpu_available = get_available_gpu_partition_for_period(start_date, end_date)
+    if df_gpu_available.empty:
+        return pd.DataFrame(columns=["partition", "load"])
+
+    if "GPU" not in df_gpu_load.columns:
+        df_gpu_load = pd.DataFrame(columns=["GPU", "load"])
+
+    df_gpu_load = df_gpu_load[df_gpu_load["GPU"] != "total"]
+    df_gpu_partition = (
+        df_gpu_available.merge(df_gpu_load, how="left", on="GPU")
+        .fillna({"load": 0})
+        .assign(consumption=lambda x: x["available"] * x["load"])
+    )
+    df_gpu_partition = (
+        df_gpu_partition.groupby("partition")
+        .agg({"consumption": "sum", "available": "sum"})
+        .reset_index()
+    )
+    df_gpu_partition["load"] = (
+        df_gpu_partition["consumption"] / df_gpu_partition["available"]
+    )
+    return df_gpu_partition[["partition", "load"]]
 
 
 def get_cpu_load(
@@ -199,13 +246,25 @@ def generate_metrics_for_period(start_date: datetime, end_date: datetime):
         df_load_gpu["Ressource"] = "GPU"
         df_list.append(df_load_gpu)
 
+        df_load_gpu_partition = map_gpu_load_to_partitions(
+            df_load_gpu, day_start, day_end
+        )
+        df_load_gpu_partition["date"] = current_day
+        df_load_gpu_partition["Ressource"] = "GPU"
+        df_list.append(df_load_gpu_partition)
+
         current_day += timedelta(days=1)
 
     df_load_timeseries = pd.concat(df_list)
+    df_partition_timeseries = df_load_timeseries[
+        (df_load_timeseries["partition"].notna())
+        & (df_load_timeseries["partition"] != "total")
+    ]
+    df_partition_timeseries = df_partition_timeseries.drop(columns=["GPU"])
 
-    df_total_timeseries = df_load_timeseries.query(
-        "partition == 'total' or GPU == 'total'"
+    return (
+        df_load_cpu_total,
+        df_load_mem_total,
+        df_load_gpu_total,
+        df_partition_timeseries,
     )
-    df_total_timeseries.drop(columns=["partition", "GPU"], inplace=True)
-
-    return df_load_cpu_total, df_load_mem_total, df_load_gpu_total, df_total_timeseries
