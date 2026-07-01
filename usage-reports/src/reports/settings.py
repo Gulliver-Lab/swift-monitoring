@@ -10,7 +10,11 @@ db_config = {
 
 # node8 is 128 CPUs, 250 ram
 cpus_per_partition = {"ludocpu": 512, "newcpu": 480, "oldcpu": 480}
-ram_per_partition_gb = {"ludocpu": 1028, "newcpu": 1028, "oldcpu": 899}
+ram_per_partition_mb = {
+    "ludocpu": 1028 * 1024,
+    "newcpu": 1028 * 1024,
+    "oldcpu": 899 * 1024,
+}
 gpu_per_node = {
     "node5": "RTX",
     "node7": "V100",
