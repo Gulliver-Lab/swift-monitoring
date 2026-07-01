@@ -23,4 +23,10 @@ gpu_per_node = {
     "node11": "L4",
     "node12": "L4",
 }
+gpus_per_partition = {
+    "ludocpu": [],
+    "newcpu": ["L4", "L4", "L4", "L40"],
+    "oldcpu": ["RTX", "V100"],
+}
+
 id_qos_name = {1: "Not Ludovic", 3: "Ludovic"}
