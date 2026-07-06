@@ -57,7 +57,7 @@ def format_jobs_table(df: pd.DataFrame) -> str:
     output["used_memory"] = output["used_memory"].map(format_bytes)
     output["duration"] = output["duration"].map(format_duration)
 
-    output.drop_duplicates(subset=["user", "job_name"], inplace=True)
+    # output.drop_duplicates(subset=["user", "job_name"], inplace=True)
 
     columns = [
         "user",
