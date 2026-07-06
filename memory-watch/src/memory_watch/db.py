@@ -23,6 +23,7 @@ def load_jobs_for_period(start: datetime, end: datetime) -> pd.DataFrame:
             j.time_end,
             j.mem_req,
             j.tres_req,
+            j.cpus_req,
             s.tres_usage_in_max,
             s.tres_usage_in_max_nodeid,
             s.tres_usage_in_max_taskid

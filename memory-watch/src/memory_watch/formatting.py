@@ -66,5 +66,6 @@ def format_jobs_table(df: pd.DataFrame) -> str:
         "job_name",
         "requested_memory",
         "used_memory",
+        "cpus_req",
     ]
     return output[columns].to_string(index=False)
