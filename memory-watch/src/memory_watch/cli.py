@@ -31,4 +31,4 @@ def main(argv: Sequence[str] | None = None) -> None:
     print(f"found {len(jobs)} jobs")
     jobs = enrich_with_memory_columns(jobs)
     jobs = filter_underused_jobs(jobs)
-    print(format_jobs_table(jobs))
+    print(format_jobs_table(jobs).to_string(index=False))

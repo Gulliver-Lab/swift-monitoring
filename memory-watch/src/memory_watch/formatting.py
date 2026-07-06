@@ -41,9 +41,9 @@ def _to_datetime(series: pd.Series) -> pd.Series:
     return pd.to_datetime(series, errors="coerce")
 
 
-def format_jobs_table(df: pd.DataFrame) -> str:
+def format_jobs_table(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
-        return "No matching jobs"
+        return df
 
     output = df.sort_values(by="over_provision").reset_index(drop=True)
 
@@ -68,4 +68,4 @@ def format_jobs_table(df: pd.DataFrame) -> str:
         "used_memory",
         "cpus_req",
     ]
-    return output[columns].to_string(index=False)
+    return output[columns]
