@@ -18,9 +18,8 @@ class User:
 
 
 def get_expired_users() -> list[User]:
-    # TODO: change the call to zfs userspace gulliver/home
     result = subprocess.run(
-        ["cat", "/home/francois/tmp/zfs.txt"], stdout=subprocess.PIPE
+        ["zfs", "userspace", "gulliver/home"], stdout=subprocess.PIPE
     ).stdout.decode("utf-8")
 
     users = []
