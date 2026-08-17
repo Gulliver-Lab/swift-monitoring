@@ -11,3 +11,8 @@ one-page usage report of the cluster.
 
 The subfolder [memory-watch](./memory-watch) contains a Python package to find jobs
 that used a lot less memory than what they requested.
+
+## zfs-watch
+
+The subfolder [zfs-watch](./zfs-watch) contains a Python package to find who should
+own the data (tracked by zfs) of past users (whose accounts expired).

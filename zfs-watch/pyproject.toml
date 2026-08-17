@@ -1,0 +1,39 @@
+[project]
+name = "zfs-watch"
+version = "0.1.0"
+description = "Utils for data ownership managment"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+track-expired = "zfs_watch.cli:main"
+
+[dependency-groups]
+dev = [
+    "mypy",
+    "pytest",
+    "ruff",
+    "taskipy",
+]
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.mypy]
+exclude = ["build"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.taskipy.tasks]
+format = "ruff format ."
+lint = "ruff check . --fix"
+check-formatting = "ruff format --check ."
+check-linting = "ruff check --select I ."
+check-typing = "mypy ."
+all = "task format && task lint && task check-typing"
