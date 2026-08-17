@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Utils for data ownership managment"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "ldap3>=2.9.1",
+]
 
 [project.scripts]
 track-expired = "zfs_watch.cli:main"
@@ -15,6 +17,7 @@ dev = [
     "pytest",
     "ruff",
     "taskipy",
+    "types-ldap3>=2.9.13.20260518",
 ]
 
 [build-system]
