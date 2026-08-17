@@ -64,9 +64,26 @@ def update_with_name_and_pi(users: list[User]) -> None:
             raise RuntimeError("Error in matching")
 
         user.name = entry.cn.value
-        pi = re.match(r"uid=([^,]+)", entry.manager.value, re.IGNORECASE)
+        pi = (
+            re.match(r"uid=([^,]+)", entry.manager.value, re.IGNORECASE)
+            if entry.manager.value
+            else None
+        )
         user.pi = pi.group(1) if pi else ""
 
 
+def print_users(users: list[User]) -> None:
+    # UID, name, used, pi
+    fmt = "{:<10} {:<30} {:<8} {:<8}"
+
+    print(fmt.format("UID", "Name", "Used", "Pi"))
+    print("-" * 59)
+
+    for user in users:
+        print(fmt.format(user.uid, user.name, user.used, user.pi))
+
+
 def main() -> None:
-    print("track expired")
+    users = get_expired_users()
+    update_with_name_and_pi(users)
+    print_users(users)
