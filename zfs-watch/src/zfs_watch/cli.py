@@ -14,6 +14,7 @@ class User:
     name: str | None
     used: str
     pi: str | None
+    account: str | None
 
 
 def get_expired_users() -> list[User]:
@@ -28,7 +29,7 @@ def get_expired_users() -> list[User]:
         # Only keep the ones where the "name" is the uid
         # These are the expired accounts
         if uid.isdigit():
-            users.append(User(int(uid), None, used, None))
+            users.append(User(int(uid), None, used, None, None))
 
     return users
 
@@ -70,17 +71,18 @@ def update_with_name_and_pi(users: list[User]) -> None:
             else None
         )
         user.pi = pi.group(1) if pi else ""
+        user.account = entry.uid.value
 
 
 def print_users(users: list[User]) -> None:
-    # UID, name, used, pi
-    fmt = "{:<10} {:<30} {:<8} {:<8}"
+    # UID, name, account, used, pi
+    fmt = "{:<10} {:<30} {:<8}    {:<8} {:<8}"
 
-    print(fmt.format("UID", "Name", "Used", "Pi"))
-    print("-" * 59)
+    print(fmt.format("UID", "Name", "Account", "Used", "Pi"))
+    print("-" * 71)
 
     for user in users:
-        print(fmt.format(user.uid, user.name, user.used, user.pi))
+        print(fmt.format(user.uid, user.name, user.account, user.used, user.pi))
 
 
 def main() -> None:
