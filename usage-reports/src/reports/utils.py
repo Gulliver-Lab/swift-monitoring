@@ -19,7 +19,9 @@ def trim_df_between_dates(
     )
 
     df["duration"] = df["time_end"] - df["time_start"]
-    assert df["duration"].max() <= (end_date - start_date).total_seconds()
+    if not df["duration"].max() <= (end_date - start_date).total_seconds():
+        message = f"Max job duration ({df.duration.max()}) is larger than the time period ({(end_date - start_date).total_seconds()})"
+        raise RuntimeError(message)
 
     return df[df["duration"] > 0].reset_index(drop=True)
 
