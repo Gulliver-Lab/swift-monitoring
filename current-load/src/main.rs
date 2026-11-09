@@ -6,19 +6,45 @@ struct Node {
     mem_used: u32,
     cpu_tot: u32,
     cpu_used: u32,
-    gpu: String,
+    gpu: Option<String>,
     gpu_used: bool,
 }
 
+fn print_node(node: Node) {
+    println!("{}: ", node.name);
+    println!("\t{}", node.mem_tot);
+    println!("\t{}", node.mem_used);
+    println!("\t{}", node.cpu_tot);
+    println!("\t{}", node.cpu_used);
+    match node.gpu {
+        Some(i) => println!("\t{}", i),
+        _ => println!("\tNone"),
+    };
+
+    println!("\t{}", node.gpu_used);
+}
+
+fn extract_gpu_name(s: String) -> Option<String> {
+    let start = s.find('_')? + 1;
+    let rest = &s[start..];
+    let end = rest.find(['-', ':', '_']).unwrap_or(rest.len());
+    Some((&s[start..start + end]).to_string())
+}
+
 fn node_from_sinfo_line(line: String) -> Node {
+    let cpu_info = (&line[60..80]).trim().to_string();
+    let split_cpu_info = cpu_info.split("/").collect::<Vec<&str>>();
+
+    let gpu_name = extract_gpu_name((&line[80..100]).to_string());
+
     return Node {
-        name: "node1".to_string(),
+        name: (&line[120..140]).trim().to_string(),
         mem_tot: (&line[20..40]).trim().parse().expect("Not valid number"),
         mem_used: (&line[40..60]).trim().parse().expect("Not valid number"),
-        cpu_tot: (&line[20..40]).trim().parse().expect("Not valid number"),
-        cpu_used: (&line[20..40]).trim().parse().expect("Not valid number"),
-        gpu: "gpu".to_string(),
-        gpu_used: false,
+        cpu_tot: split_cpu_info[3].parse().expect("Not valid number"),
+        cpu_used: split_cpu_info[0].trim().parse().expect("Not valid number"),
+        gpu: extract_gpu_name((&line[80..100]).to_string()),
+        gpu_used: (&line[100..120]).trim().to_string() != "(null)",
     };
 }
 
@@ -41,6 +67,10 @@ fn read_sinfo() {
         nodes.push(node);
     }
     println!("Read {} lines", nodes.len());
+
+    for node in nodes {
+        print_node(node);
+    }
 }
 
 fn main() {
