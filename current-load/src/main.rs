@@ -24,21 +24,19 @@ fn print_node(node: Node) {
     println!("\t{}", node.gpu_used);
 }
 
-fn extract_gpu_name(s: String) -> Option<String> {
+fn extract_gpu_name(s: &str) -> Option<String> {
     let start = s.find('_')? + 1;
     let rest = &s[start..];
     let end = rest.find(['-', ':', '_']).unwrap_or(rest.len());
     Some((&s[start..start + end]).to_string())
 }
 
-fn node_from_sinfo_line(line: String) -> Option<Node> {
+fn node_from_sinfo_line(line: &str) -> Option<Node> {
     let cpu_info = (&line[60..80]).trim().to_string();
     let split_cpu_info = cpu_info.split("/").collect::<Vec<&str>>();
     if split_cpu_info[2].parse::<u32>().unwrap() > 0 {
         return None;
     }
-
-    let gpu_name = extract_gpu_name((&line[80..100]).to_string());
 
     return Some(Node {
         name: (&line[120..140]).trim().to_string(),
@@ -46,7 +44,7 @@ fn node_from_sinfo_line(line: String) -> Option<Node> {
         mem_used: (&line[40..60]).trim().parse().expect("Not valid number"),
         cpu_tot: split_cpu_info[3].parse().expect("Not valid number"),
         cpu_used: split_cpu_info[0].trim().parse().expect("Not valid number"),
-        gpu: extract_gpu_name((&line[80..100]).to_string()),
+        gpu: extract_gpu_name(&line[80..100]),
         gpu_used: (&line[100..120]).trim().to_string() != "(null)",
     });
 }
@@ -66,7 +64,7 @@ fn read_sinfo() {
     let mut nodes: Vec<Node> = Vec::new();
 
     for line in output.lines() {
-        let node = node_from_sinfo_line(line.to_string());
+        let node = node_from_sinfo_line(line);
         match node {
             Some(i) => nodes.push(i),
             _ => (),
