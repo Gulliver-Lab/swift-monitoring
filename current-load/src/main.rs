@@ -2,9 +2,9 @@ use std::process::Command;
 
 struct Node {
     name: String,
-    mem_tot: u32,
+    mem_total: u32,
     mem_used: u32,
-    cpu_tot: u32,
+    cpu_total: u32,
     cpu_used: u32,
     gpu: Option<String>,
     gpu_used: bool,
@@ -12,9 +12,9 @@ struct Node {
 
 fn print_node(node: Node) {
     println!("{}: ", node.name);
-    println!("\t{}", node.mem_tot);
+    println!("\t{}", node.mem_total);
     println!("\t{}", node.mem_used);
-    println!("\t{}", node.cpu_tot);
+    println!("\t{}", node.cpu_total);
     println!("\t{}", node.cpu_used);
     match node.gpu {
         Some(i) => println!("\t{}", i),
@@ -40,9 +40,9 @@ fn node_from_sinfo_line(line: &str) -> Option<Node> {
 
     return Some(Node {
         name: line[120..140].trim().to_string(),
-        mem_tot: line[20..40].trim().parse().expect("Not valid number"),
+        mem_total: line[20..40].trim().parse().expect("Not valid number"),
         mem_used: line[40..60].trim().parse().expect("Not valid number"),
-        cpu_tot: split_cpu_info[3].parse().expect("Not valid number"),
+        cpu_total: split_cpu_info[3].parse().expect("Not valid number"),
         cpu_used: split_cpu_info[0].trim().parse().expect("Not valid number"),
         gpu: extract_gpu_name(&line[80..100]),
         gpu_used: line[100..120].trim().to_string() != "(null)",
