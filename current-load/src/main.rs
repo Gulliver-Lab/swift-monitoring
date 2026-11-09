@@ -34,7 +34,7 @@ fn extract_gpu_name(s: String) -> Option<String> {
 fn node_from_sinfo_line(line: String) -> Option<Node> {
     let cpu_info = (&line[60..80]).trim().to_string();
     let split_cpu_info = cpu_info.split("/").collect::<Vec<&str>>();
-    if split_cpu_info[2].parse::<u32>().expect("foo") > 0 {
+    if split_cpu_info[2].parse::<u32>().unwrap() > 0 {
         return None;
     }
 
