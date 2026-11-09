@@ -45,7 +45,7 @@ fn node_from_sinfo_line(line: &str) -> Option<Node> {
         cpu_tot: split_cpu_info[3].parse().expect("Not valid number"),
         cpu_used: split_cpu_info[0].trim().parse().expect("Not valid number"),
         gpu: extract_gpu_name(&line[80..100]),
-        gpu_used: (&line[100..120]).trim().to_string() != "(null)",
+        gpu_used: line[100..120].trim().to_string() != "(null)",
     });
 }
 
@@ -61,15 +61,7 @@ fn read_sinfo() {
         .expect("Failed to run sinfo");
     let output = String::from_utf8(sinfo_process.stdout).expect("Failed to decode sinfo output");
 
-    let mut nodes: Vec<Node> = Vec::new();
-
-    for line in output.lines() {
-        let node = node_from_sinfo_line(line);
-        match node {
-            Some(i) => nodes.push(i),
-            _ => (),
-        }
-    }
+    let nodes: Vec<Node> = output.lines().filter_map(node_from_sinfo_line).collect();
 
     for node in nodes {
         print_node(node);
