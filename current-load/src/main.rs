@@ -49,7 +49,7 @@ fn node_from_sinfo_line(line: &str) -> Option<Node> {
     });
 }
 
-fn read_sinfo() {
+fn call_and_parse_sinfo() {
     let sinfo_process = Command::new("sinfo")
         .args([
             "-h",
@@ -69,5 +69,5 @@ fn read_sinfo() {
 }
 
 fn main() {
-    read_sinfo();
+    call_and_parse_sinfo();
 }
