@@ -28,20 +28,20 @@ fn extract_gpu_name(s: &str) -> Option<String> {
     let start = s.find('_')? + 1;
     let rest = &s[start..];
     let end = rest.find(['-', ':', '_']).unwrap_or(rest.len());
-    Some((&s[start..start + end]).to_string())
+    Some(s[start..start + end].to_string())
 }
 
 fn node_from_sinfo_line(line: &str) -> Option<Node> {
-    let cpu_info = (&line[60..80]).trim().to_string();
+    let cpu_info = line[60..80].trim().to_string();
     let split_cpu_info = cpu_info.split("/").collect::<Vec<&str>>();
     if split_cpu_info[2].parse::<u32>().unwrap() > 0 {
         return None;
     }
 
     return Some(Node {
-        name: (&line[120..140]).trim().to_string(),
-        mem_tot: (&line[20..40]).trim().parse().expect("Not valid number"),
-        mem_used: (&line[40..60]).trim().parse().expect("Not valid number"),
+        name: line[120..140].trim().to_string(),
+        mem_tot: line[20..40].trim().parse().expect("Not valid number"),
+        mem_used: line[40..60].trim().parse().expect("Not valid number"),
         cpu_tot: split_cpu_info[3].parse().expect("Not valid number"),
         cpu_used: split_cpu_info[0].trim().parse().expect("Not valid number"),
         gpu: extract_gpu_name(&line[80..100]),
