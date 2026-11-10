@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::process::Command;
 
 struct Node {
@@ -8,6 +9,11 @@ struct Node {
     cpu_used: u32,
     gpu: Option<String>,
     gpu_used: bool,
+}
+
+struct Partition {
+    name: String,
+    nodes: Vec<Node>,
 }
 
 fn display_node_progress(node: Node) {
@@ -57,7 +63,7 @@ fn node_from_sinfo_line(line: &str) -> Option<Node> {
     })
 }
 
-fn call_and_parse_sinfo() {
+fn call_and_parse_sinfo() -> HashMap<String, Partition> {
     let sinfo_process = Command::new("sinfo")
         .args([
             "-h",
@@ -69,12 +75,27 @@ fn call_and_parse_sinfo() {
         .expect("Failed to run sinfo");
     let output = String::from_utf8(sinfo_process.stdout).expect("Failed to decode sinfo output");
 
-    let nodes: Vec<Node> = output.lines().filter_map(node_from_sinfo_line).collect();
-
-    for node in nodes {
-        // print_node(node);
-        display_node_progress(node);
+    let mut partition_dict = HashMap::<String, Partition>::new();
+    for line in output.lines() {
+        if let Some(node) = node_from_sinfo_line(line) {
+            let partition_name = line[0..20].trim().to_string();
+            if !partition_dict.contains_key(&partition_name) {
+                partition_dict.insert(
+                    partition_name.clone(),
+                    Partition {
+                        name: partition_name.clone(),
+                        nodes: Vec::<Node>::new(),
+                    },
+                );
+            }
+            partition_dict
+                .get_mut(&partition_name)
+                .unwrap()
+                .nodes
+                .push(node);
+        }
     }
+    return partition_dict;
 }
 
 const EIGHTHS: [char; 7] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉'];
@@ -107,5 +128,8 @@ fn progress_bar(current: u32, max: u32, width: usize) -> String {
 }
 
 fn main() {
-    call_and_parse_sinfo();
+    let partition_dict = call_and_parse_sinfo();
+    for (partition_name, partition) in &partition_dict {
+        println!("{partition_name}: {{partition.nodes.len()}}");
+    }
 }
