@@ -18,7 +18,6 @@ struct Node {
 }
 
 struct Partition {
-    name: String,
     nodes: Vec<Node>,
 }
 
@@ -96,7 +95,6 @@ fn call_and_parse_sinfo() -> HashMap<String, Partition> {
                 partition_dict.insert(
                     partition_name.clone(),
                     Partition {
-                        name: partition_name.clone(),
                         nodes: Vec::<Node>::new(),
                     },
                 );
@@ -108,7 +106,7 @@ fn call_and_parse_sinfo() -> HashMap<String, Partition> {
                 .push(node);
         }
     }
-    return partition_dict;
+    partition_dict
 }
 
 // DISPLAY
