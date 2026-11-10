@@ -140,17 +140,22 @@ fn progress_bar<T: Progress>(progress: T, width: usize) -> String {
     }
 }
 
-fn display_node_progress(node: &Node) {
-    let cpu_flag = format!("{}/{}", node.cpu.current(), node.cpu.max());
-    let mem_flag = format!("{}/{}", node.memory.current(), node.memory.max());
-    println!(
-        "{:<7} {} {:>7} {} {:>7}",
-        node.name,
-        progress_bar(node.cpu, 10),
-        cpu_flag,
-        progress_bar(node.memory, 10),
-        mem_flag,
-    );
+fn progress_bar_with_counter<T: Progress>(progress: T, width: usize) -> String {
+    let counter = format!("{}/{}", progress.current(), progress.max());
+    format!("{} {:>7}", progress_bar(progress, width), counter)
+}
+
+fn display_partition(name: &str, partition: &Partition) {
+    println!("{name}");
+    let bar_width = 10;
+    for node in &partition.nodes {
+        println!(
+            "{:<7} {} {}",
+            node.name,
+            progress_bar_with_counter(node.cpu, bar_width),
+            progress_bar_with_counter(node.memory, bar_width)
+        );
+    }
 }
 
 // MAIN
@@ -158,9 +163,6 @@ fn display_node_progress(node: &Node) {
 fn main() {
     let partition_dict = call_and_parse_sinfo();
     for (partition_name, partition) in &partition_dict {
-        println!("{partition_name}");
-        for node in &partition.nodes {
-            display_node_progress(node);
-        }
+        display_partition(partition_name, partition);
     }
 }
