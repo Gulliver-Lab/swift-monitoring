@@ -16,7 +16,7 @@ struct Partition {
     nodes: Vec<Node>,
 }
 
-fn display_node_progress(node: Node) {
+fn display_node_progress(node: &Node) {
     let cpu_flag = format!("{}/{}", node.cpu_used, node.cpu_total);
     let mem_flag = format!("{}/{}", node.mem_used, node.mem_total);
     println!(
@@ -130,6 +130,9 @@ fn progress_bar(current: u32, max: u32, width: usize) -> String {
 fn main() {
     let partition_dict = call_and_parse_sinfo();
     for (partition_name, partition) in &partition_dict {
-        println!("{partition_name}: {{partition.nodes.len()}}");
+        println!("{partition_name}");
+        for node in &partition.nodes {
+            display_node_progress(node);
+        }
     }
 }
