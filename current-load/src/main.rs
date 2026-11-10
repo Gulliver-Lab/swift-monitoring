@@ -1,4 +1,6 @@
+use anstyle::{AnsiColor, Style};
 use std::process::Command;
+use terminal_colorsaurus::{QueryOptions, ThemeMode, theme_mode};
 
 struct Node {
     name: String,
@@ -22,6 +24,13 @@ fn print_node(node: Node) {
     };
 
     println!("\t{}", node.gpu_used);
+}
+
+fn display_node_progress(node: Node) {
+    println!("{}", node.name);
+    println!("{}", boxed_progress_bar(node.cpu_used, node.cpu_total, 30));
+    println!("{}", boxed_progress_bar(node.mem_used, node.mem_total, 30));
+    println!();
 }
 
 fn extract_gpu_name(s: &str) -> Option<String> {
@@ -64,8 +73,46 @@ fn call_and_parse_sinfo() {
     let nodes: Vec<Node> = output.lines().filter_map(node_from_sinfo_line).collect();
 
     for node in nodes {
-        print_node(node);
+        // print_node(node);
+        display_node_progress(node);
     }
+}
+
+fn box_around(inner: &str, width: usize) -> String {
+    let rule = "─".repeat(width);
+    format!("┌{rule}┐\n│{inner}│\n└{rule}┘")
+}
+
+fn progress_bar(current: u32, max: u32, width: usize) -> String {
+    let ratio = if max == 0 {
+        0.0
+    } else {
+        (current as f32 / max as f32).clamp(0.0, 1.0)
+    };
+
+    let filled = (ratio * width as f32).round() as usize;
+
+    let light = matches!(theme_mode(QueryOptions::default()), Ok(ThemeMode::Light));
+
+    let color = if light {
+        AnsiColor::Green
+    } else {
+        AnsiColor::BrightGreen
+    };
+
+    let style = Style::new().fg_color(Some(color.into()));
+
+    format!(
+        "{style}{}{style:#}{}",
+        //"█".repeat(filled),
+        "█".repeat(filled),
+        "─".repeat(width - filled),
+    )
+}
+
+fn boxed_progress_bar(current: u32, max: u32, width: usize) -> String {
+    let bar = progress_bar(current, max, width);
+    box_around(&bar, width)
 }
 
 fn main() {
