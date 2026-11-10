@@ -146,13 +146,12 @@ fn progress_bar_with_counter<T: Progress>(progress: T, width: usize) -> String {
 }
 
 fn display_partition(name: &str, partition: &Partition) {
-    println!("{name}");
     let bar_width = 10;
 
     // name + (bar + counter) * 2 + spaces, accounting for spaces
     let inner_width = 7 + (bar_width + 9) * 2 + 2;
 
-    println!("┌{}┐", "─".repeat(inner_width));
+    println!("┌─{}{}┐", name, "─".repeat(inner_width - name.len() - 1));
 
     for node in &partition.nodes {
         println!(
