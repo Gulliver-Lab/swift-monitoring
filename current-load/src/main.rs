@@ -159,15 +159,11 @@ fn display_partition(name: &str, partition: &Partition) {
     let inner_width = 7 + (bar_width + 9) * 2 + 4 + 9;
 
     println!(
-        "┌─{}{}{}{}{}{}{}{}┐",
+        "┌─{}{}CPU{}RAM{}GPU─┐",
         name,
         "─".repeat(18 - name.len()),
-        "CPU",
         "─".repeat(18),
-        "RAM",
         "─".repeat(11),
-        "GPU",
-        "─".repeat(1),
     );
 
     for node in &partition.nodes {
