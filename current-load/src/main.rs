@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::process::Command;
 
+// MODELS
+
 struct Node {
     name: String,
     mem_total: u32,
@@ -16,18 +18,7 @@ struct Partition {
     nodes: Vec<Node>,
 }
 
-fn display_node_progress(node: &Node) {
-    let cpu_flag = format!("{}/{}", node.cpu_used, node.cpu_total);
-    let mem_flag = format!("{}/{}", node.mem_used, node.mem_total);
-    println!(
-        "{:<7} {} {:>7} {} {:>7}",
-        node.name,
-        progress_bar(node.cpu_used, node.cpu_total, 10),
-        cpu_flag,
-        progress_bar(node.mem_used, node.mem_total, 10),
-        mem_flag,
-    );
-}
+// PARSING
 
 fn extract_gpu_name(s: &str) -> Option<String> {
     let start = s.find('_')? + 1;
@@ -98,6 +89,8 @@ fn call_and_parse_sinfo() -> HashMap<String, Partition> {
     return partition_dict;
 }
 
+// DISPLAY
+
 const EIGHTHS: [char; 7] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉'];
 
 fn progress_bar(current: u32, max: u32, width: usize) -> String {
@@ -126,6 +119,21 @@ fn progress_bar(current: u32, max: u32, width: usize) -> String {
         )
     }
 }
+
+fn display_node_progress(node: &Node) {
+    let cpu_flag = format!("{}/{}", node.cpu_used, node.cpu_total);
+    let mem_flag = format!("{}/{}", node.mem_used, node.mem_total);
+    println!(
+        "{:<7} {} {:>7} {} {:>7}",
+        node.name,
+        progress_bar(node.cpu_used, node.cpu_total, 10),
+        cpu_flag,
+        progress_bar(node.mem_used, node.mem_total, 10),
+        mem_flag,
+    );
+}
+
+// MAIN
 
 fn main() {
     let partition_dict = call_and_parse_sinfo();
