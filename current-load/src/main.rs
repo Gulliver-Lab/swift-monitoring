@@ -1,6 +1,4 @@
-use anstyle::{AnsiColor, Style};
 use std::process::Command;
-use terminal_colorsaurus::{QueryOptions, ThemeMode, theme_mode};
 
 struct Node {
     name: String,
@@ -12,25 +10,11 @@ struct Node {
     gpu_used: bool,
 }
 
-fn print_node(node: Node) {
-    println!("{}: ", node.name);
-    println!("\t{}", node.mem_total);
-    println!("\t{}", node.mem_used);
-    println!("\t{}", node.cpu_total);
-    println!("\t{}", node.cpu_used);
-    match node.gpu {
-        Some(i) => println!("\t{}", i),
-        _ => println!("\tNone"),
-    };
-
-    println!("\t{}", node.gpu_used);
-}
-
 fn display_node_progress(node: Node) {
     let cpu_flag = format!("{}/{}", node.cpu_used, node.cpu_total);
     let mem_flag = format!("{}/{}", node.mem_used, node.mem_total);
     println!(
-        "{:<7} {} {:>7} {} {:>12}",
+        "{:<7} {} {:>7} {} {:>7}",
         node.name,
         progress_bar(node.cpu_used, node.cpu_total, 10),
         cpu_flag,
@@ -53,10 +37,19 @@ fn node_from_sinfo_line(line: &str) -> Option<Node> {
         return None;
     }
 
+    // Memory is in MB, we want to display GB
     Some(Node {
         name: line[120..140].trim().to_string(),
-        mem_total: line[20..40].trim().parse().expect("Not valid number"),
-        mem_used: line[40..60].trim().parse().expect("Not valid number"),
+        mem_total: line[20..40]
+            .trim()
+            .parse::<u32>()
+            .expect("Not valid number")
+            / 1024,
+        mem_used: line[40..60]
+            .trim()
+            .parse::<u32>()
+            .expect("Not valid number")
+            / 1024,
         cpu_total: split_cpu_info[3].parse().expect("Not valid number"),
         cpu_used: split_cpu_info[0].trim().parse().expect("Not valid number"),
         gpu: extract_gpu_name(&line[80..100]),
