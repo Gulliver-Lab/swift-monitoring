@@ -145,20 +145,38 @@ fn progress_bar_with_counter<T: Progress>(progress: T, width: usize) -> String {
     format!("{} {:>7}", progress_bar(progress, width), counter)
 }
 
+fn gpu_tag(node: &Node) -> String {
+    if let Some(gpu_name) = &node.gpu {
+        return format!("{:>4}", gpu_name);
+    }
+    "    ".to_string()
+}
+
 fn display_partition(name: &str, partition: &Partition) {
     let bar_width = 10;
 
-    // name + (bar + counter) * 2 + spaces, accounting for spaces
-    let inner_width = 7 + (bar_width + 9) * 2 + 2;
+    // name + (bar + counter) * 2 + GPU tag + spaces
+    let inner_width = 7 + (bar_width + 9) * 2 + 4 + 9;
 
-    println!("┌─{}{}┐", name, "─".repeat(inner_width - name.len() - 1));
+    println!(
+        "┌─{}{}{}{}{}{}{}{}┐",
+        name,
+        "─".repeat(18 - name.len()),
+        "CPU",
+        "─".repeat(18),
+        "RAM",
+        "─".repeat(11),
+        "GPU",
+        "─".repeat(1),
+    );
 
     for node in &partition.nodes {
         println!(
-            "| {:<7} {} {} |",
+            "│ {:<7} │ {} │ {} │ {} │",
             node.name,
             progress_bar_with_counter(node.cpu, bar_width),
-            progress_bar_with_counter(node.memory, bar_width)
+            progress_bar_with_counter(node.memory, bar_width),
+            gpu_tag(node)
         );
     }
     println!("└{}┘", "─".repeat(inner_width));
