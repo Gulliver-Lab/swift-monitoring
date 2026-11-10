@@ -186,7 +186,9 @@ fn display_partition(name: &str, partition: &Partition) {
 
 fn main() {
     let partition_dict = call_and_parse_sinfo();
-    for (partition_name, partition) in &partition_dict {
-        display_partition(partition_name, partition);
+
+    let partition_order = ["ludocpu", "newcpu", "oldcpu"];
+    for &partition_name in &partition_order {
+        display_partition(partition_name, partition_dict.get(partition_name).unwrap());
     }
 }
