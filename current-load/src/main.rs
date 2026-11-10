@@ -3,12 +3,16 @@ use std::process::Command;
 
 // MODELS
 
+#[derive(Clone, Copy)]
+struct Gauge {
+    current: u64,
+    max: u64,
+}
+
 struct Node {
     name: String,
-    mem_total: u32,
-    mem_used: u32,
-    cpu_total: u32,
-    cpu_used: u32,
+    memory: Gauge,
+    cpu: Gauge,
     gpu: Option<String>,
     gpu_used: bool,
 }
@@ -16,6 +20,20 @@ struct Node {
 struct Partition {
     name: String,
     nodes: Vec<Node>,
+}
+
+trait Progress {
+    fn current(&self) -> u64;
+    fn max(&self) -> u64;
+}
+
+impl Progress for Gauge {
+    fn current(&self) -> u64 {
+        self.current
+    }
+    fn max(&self) -> u64 {
+        self.max
+    }
 }
 
 // PARSING
@@ -30,25 +48,29 @@ fn extract_gpu_name(s: &str) -> Option<String> {
 fn node_from_sinfo_line(line: &str) -> Option<Node> {
     let cpu_info = line[60..80].trim().to_string();
     let split_cpu_info = cpu_info.split("/").collect::<Vec<&str>>();
-    if split_cpu_info[2].parse::<u32>().unwrap() > 0 {
+    if split_cpu_info[2].parse::<u64>().unwrap() > 0 {
         return None;
     }
 
     // Memory is in MB, we want to display GB
     Some(Node {
         name: line[120..140].trim().to_string(),
-        mem_total: line[20..40]
-            .trim()
-            .parse::<u32>()
-            .expect("Not valid number")
-            / 1024,
-        mem_used: line[40..60]
-            .trim()
-            .parse::<u32>()
-            .expect("Not valid number")
-            / 1024,
-        cpu_total: split_cpu_info[3].parse().expect("Not valid number"),
-        cpu_used: split_cpu_info[0].trim().parse().expect("Not valid number"),
+        memory: Gauge {
+            current: line[20..40]
+                .trim()
+                .parse::<u64>()
+                .expect("Not valid number")
+                / 1024,
+            max: line[40..60]
+                .trim()
+                .parse::<u64>()
+                .expect("Not valid number")
+                / 1024,
+        },
+        cpu: Gauge {
+            current: split_cpu_info[3].parse().expect("Not valid number"),
+            max: split_cpu_info[0].trim().parse().expect("Not valid number"),
+        },
         gpu: extract_gpu_name(&line[80..100]),
         gpu_used: line[100..120].trim() != "(null)",
     })
@@ -93,11 +115,11 @@ fn call_and_parse_sinfo() -> HashMap<String, Partition> {
 
 const EIGHTHS: [char; 7] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉'];
 
-fn progress_bar(current: u32, max: u32, width: usize) -> String {
-    let units = if max == 0 {
+fn progress_bar<T: Progress>(progress: T, width: usize) -> String {
+    let units = if progress.max() == 0 {
         0.0
     } else {
-        (current as f32 / max as f32).clamp(0.0, 1.0) * width as f32 * 8.0
+        (progress.current() as f64 / progress.max() as f64).clamp(0.0, 1.0) * width as f64 * 8.0
     };
 
     let full = (units / 8.0) as usize;
@@ -121,14 +143,14 @@ fn progress_bar(current: u32, max: u32, width: usize) -> String {
 }
 
 fn display_node_progress(node: &Node) {
-    let cpu_flag = format!("{}/{}", node.cpu_used, node.cpu_total);
-    let mem_flag = format!("{}/{}", node.mem_used, node.mem_total);
+    let cpu_flag = format!("{}/{}", node.cpu.current(), node.cpu.max());
+    let mem_flag = format!("{}/{}", node.memory.current(), node.memory.max());
     println!(
         "{:<7} {} {:>7} {} {:>7}",
         node.name,
-        progress_bar(node.cpu_used, node.cpu_total, 10),
+        progress_bar(node.cpu, 10),
         cpu_flag,
-        progress_bar(node.mem_used, node.mem_total, 10),
+        progress_bar(node.memory, 10),
         mem_flag,
     );
 }
