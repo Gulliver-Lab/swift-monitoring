@@ -55,20 +55,20 @@ fn node_from_sinfo_line(line: &str) -> Option<Node> {
     Some(Node {
         name: line[120..140].trim().to_string(),
         memory: Gauge {
-            current: line[20..40]
+            current: line[40..60]
                 .trim()
                 .parse::<u64>()
                 .expect("Not valid number")
                 / 1024,
-            max: line[40..60]
+            max: line[20..40]
                 .trim()
                 .parse::<u64>()
                 .expect("Not valid number")
                 / 1024,
         },
         cpu: Gauge {
-            current: split_cpu_info[3].parse().expect("Not valid number"),
-            max: split_cpu_info[0].trim().parse().expect("Not valid number"),
+            current: split_cpu_info[0].parse().expect("Not valid number"),
+            max: split_cpu_info[3].trim().parse().expect("Not valid number"),
         },
         gpu: extract_gpu_name(&line[80..100]),
         gpu_used: line[100..120].trim() != "(null)",
@@ -148,14 +148,21 @@ fn progress_bar_with_counter<T: Progress>(progress: T, width: usize) -> String {
 fn display_partition(name: &str, partition: &Partition) {
     println!("{name}");
     let bar_width = 10;
+
+    // name + (bar + counter) * 2 + spaces, accounting for spaces
+    let inner_width = 7 + (bar_width + 9) * 2 + 2;
+
+    println!("┌{}┐", "─".repeat(inner_width));
+
     for node in &partition.nodes {
         println!(
-            "{:<7} {} {}",
+            "| {:<7} {} {} |",
             node.name,
             progress_bar_with_counter(node.cpu, bar_width),
             progress_bar_with_counter(node.memory, bar_width)
         );
     }
+    println!("└{}┘", "─".repeat(inner_width));
 }
 
 // MAIN
