@@ -27,10 +27,16 @@ fn print_node(node: Node) {
 }
 
 fn display_node_progress(node: Node) {
-    println!("{}", node.name);
-    println!("{}", boxed_progress_bar(node.cpu_used, node.cpu_total, 30));
-    println!("{}", boxed_progress_bar(node.mem_used, node.mem_total, 30));
-    println!();
+    let cpu_flag = format!("{}/{}", node.cpu_used, node.cpu_total);
+    let mem_flag = format!("{}/{}", node.mem_used, node.mem_total);
+    println!(
+        "{:<7} {} {:>7} {} {:>12}",
+        node.name,
+        progress_bar(node.cpu_used, node.cpu_total, 10),
+        cpu_flag,
+        progress_bar(node.mem_used, node.mem_total, 10),
+        mem_flag,
+    );
 }
 
 fn extract_gpu_name(s: &str) -> Option<String> {
@@ -78,41 +84,33 @@ fn call_and_parse_sinfo() {
     }
 }
 
-fn box_around(inner: &str, width: usize) -> String {
-    let rule = "─".repeat(width);
-    format!("┌{rule}┐\n│{inner}│\n└{rule}┘")
-}
+const EIGHTHS: [char; 7] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉'];
 
 fn progress_bar(current: u32, max: u32, width: usize) -> String {
-    let ratio = if max == 0 {
+    let units = if max == 0 {
         0.0
     } else {
-        (current as f32 / max as f32).clamp(0.0, 1.0)
+        (current as f32 / max as f32).clamp(0.0, 1.0) * width as f32 * 8.0
     };
 
-    let filled = (ratio * width as f32).round() as usize;
-
-    let light = matches!(theme_mode(QueryOptions::default()), Ok(ThemeMode::Light));
-
-    let color = if light {
-        AnsiColor::Green
+    let full = (units / 8.0) as usize;
+    let rem = (units % 8.0) as usize;
+    if rem == 0 {
+        format!("{}{}", "█".repeat(full), " ".repeat(width - full))
     } else {
-        AnsiColor::BrightGreen
-    };
-
-    let style = Style::new().fg_color(Some(color.into()));
-
-    format!(
-        "{style}{}{style:#}{}",
-        //"█".repeat(filled),
-        "█".repeat(filled),
-        "─".repeat(width - filled),
-    )
-}
-
-fn boxed_progress_bar(current: u32, max: u32, width: usize) -> String {
-    let bar = progress_bar(current, max, width);
-    box_around(&bar, width)
+        let tail = EIGHTHS
+            .get(rem - 1)
+            .copied()
+            .map(|c| c.to_string())
+            .unwrap_or_default();
+        //println!("There: {} {} {}", units, full, rem);
+        format!(
+            "{}{}{}",
+            "█".repeat(full),
+            tail,
+            " ".repeat(width - full - 1)
+        )
+    }
 }
 
 fn main() {
