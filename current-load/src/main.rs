@@ -152,9 +152,14 @@ fn progress_bar<T: Progress>(progress: T, width: usize) -> String {
     }
 }
 
-fn progress_bar_with_counter<T: Progress>(progress: T, width: usize) -> String {
+fn progress_bar_with_counter<T: Progress>(progress: T, width: usize, color: &str) -> String {
     let counter = format!("{}/{}", progress.current(), progress.max());
-    format!("{} {:>7}", progress_bar(progress, width), counter)
+    format!(
+        "{}{}\x1b[0m {:>7}",
+        color,
+        progress_bar(progress, width),
+        counter
+    )
 }
 
 fn gpu_tag(node: &Node) -> String {
@@ -199,12 +204,10 @@ fn display_partition(name: &str, partition: &Partition, colors: &Colors) {
             &colors.free
         };
         println!(
-            "│ {:<7} │ {}{}\x1b[0m │ {}{}\x1b[0m │ {}{}\x1b[0m │",
+            "│ {:<7} │ {} │ {} │ {}{}\x1b[0m │",
             node.name,
-            node_cpu_color,
-            progress_bar_with_counter(node.cpu, bar_width),
-            node_ram_color,
-            progress_bar_with_counter(node.memory, bar_width),
+            progress_bar_with_counter(node.cpu, bar_width, node_cpu_color),
+            progress_bar_with_counter(node.memory, bar_width, node_ram_color),
             gpu_color,
             gpu_tag(node)
         );
