@@ -179,13 +179,17 @@ fn display_partition(name: &str, partition: &Partition, colors: &Colors) {
     );
 
     for node in &partition.nodes {
-        let node_cpu_color = if node.cpu.ratio() < 0.8 {
+        let node_cpu_color = if node.cpu.ratio() < 0.75 {
             &colors.good
+        } else if node.cpu.ratio() < 0.95 {
+            &colors.medium
         } else {
             &colors.bad
         };
-        let node_ram_color = if node.memory.ratio() < 0.8 {
+        let node_ram_color = if node.memory.ratio() < 0.75 {
             &colors.good
+        } else if node.cpu.ratio() < 0.95 {
+            &colors.medium
         } else {
             &colors.bad
         };
