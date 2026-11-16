@@ -213,7 +213,7 @@ fn display_partition(name: &str, partition: &Partition, colors: &Colors) {
             &colors.free
         };
         println!(
-            "│ {:<7} │ {} │ {} │ {}{}\x1b[0m │",
+            "│ {:<7} │ {} │ {} │ {}\x1b[1m{}\x1b[0m │",
             node.name,
             progress_bar_with_counter(node.cpu, bar_width, node_cpu_color),
             progress_bar_with_counter(node.memory, bar_width, node_ram_color),
