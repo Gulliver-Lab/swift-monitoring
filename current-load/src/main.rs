@@ -21,9 +21,18 @@ struct Partition {
     nodes: Vec<Node>,
 }
 
+struct Colors {
+    good: String,
+    medium: String,
+    bad: String,
+    free: String,
+    busy: String,
+}
+
 trait Progress {
     fn current(&self) -> u64;
     fn max(&self) -> u64;
+    fn ratio(&self) -> f64;
 }
 
 impl Progress for Gauge {
@@ -32,6 +41,9 @@ impl Progress for Gauge {
     }
     fn max(&self) -> u64 {
         self.max
+    }
+    fn ratio(&self) -> f64 {
+        (self.current() as f64 / self.max() as f64).clamp(0.0, 1.0)
     }
 }
 
@@ -117,7 +129,7 @@ fn progress_bar<T: Progress>(progress: T, width: usize) -> String {
     let units = if progress.max() == 0 {
         0.0
     } else {
-        (progress.current() as f64 / progress.max() as f64).clamp(0.0, 1.0) * width as f64 * 8.0
+        progress.ratio() * width as f64 * 8.0
     };
 
     let full = (units / 8.0) as usize;
@@ -152,7 +164,7 @@ fn gpu_tag(node: &Node) -> String {
     "    ".to_string()
 }
 
-fn display_partition(name: &str, partition: &Partition) {
+fn display_partition(name: &str, partition: &Partition, colors: &Colors) {
     let bar_width = 10;
 
     // name + (bar + counter) * 2 + GPU tag + spaces
@@ -167,11 +179,29 @@ fn display_partition(name: &str, partition: &Partition) {
     );
 
     for node in &partition.nodes {
+        let node_cpu_color = if node.cpu.ratio() < 0.8 {
+            &colors.good
+        } else {
+            &colors.bad
+        };
+        let node_ram_color = if node.memory.ratio() < 0.8 {
+            &colors.good
+        } else {
+            &colors.bad
+        };
+        let gpu_color = if node.gpu_used {
+            &colors.busy
+        } else {
+            &colors.free
+        };
         println!(
-            "│ {:<7} │ {} │ {} │ {} │",
+            "│ {:<7} │ {}{}\x1b[0m │ {}{}\x1b[0m │ {}{}\x1b[0m │",
             node.name,
+            node_cpu_color,
             progress_bar_with_counter(node.cpu, bar_width),
+            node_ram_color,
             progress_bar_with_counter(node.memory, bar_width),
+            gpu_color,
             gpu_tag(node)
         );
     }
@@ -183,8 +213,20 @@ fn display_partition(name: &str, partition: &Partition) {
 fn main() {
     let partition_dict = call_and_parse_sinfo();
 
+    let colors = Colors {
+        good: "\x1b[92m".to_string(),
+        medium: "\x1b[93m".to_string(),
+        bad: "\x1b[91m".to_string(),
+        free: "\x1b[92m".to_string(),
+        busy: "\x1b[91m".to_string(),
+    };
+
     let partition_order = ["ludocpu", "newcpu", "oldcpu"];
     for &partition_name in &partition_order {
-        display_partition(partition_name, partition_dict.get(partition_name).unwrap());
+        display_partition(
+            partition_name,
+            partition_dict.get(partition_name).unwrap(),
+            &colors,
+        );
     }
 }
