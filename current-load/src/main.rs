@@ -56,6 +56,15 @@ fn extract_gpu_name(s: &str) -> Option<String> {
     Some(s[start..start + end].to_string())
 }
 
+fn is_gpu_used(s: &str) -> bool {
+    if s.trim() == "(null)" {
+        return false;
+    };
+    // stings have the format gpu:gpu_name:?(IDX: ?) where the first ? is the number of GPU used. We extract this
+    let c = s.split(':').nth(2).unwrap().chars().next().unwrap();
+    c == '1'
+}
+
 fn node_from_sinfo_line(line: &str) -> Option<Node> {
     let cpu_info = line[60..80].trim().to_string();
     let split_cpu_info = cpu_info.split("/").collect::<Vec<&str>>();
@@ -65,7 +74,7 @@ fn node_from_sinfo_line(line: &str) -> Option<Node> {
 
     // Memory is in MB, we want to display GB
     Some(Node {
-        name: line[120..140].trim().to_string(),
+        name: line[140..160].trim().to_string(),
         memory: Gauge {
             current: line[40..60]
                 .trim()
@@ -83,7 +92,7 @@ fn node_from_sinfo_line(line: &str) -> Option<Node> {
             max: split_cpu_info[3].trim().parse().expect("Not valid number"),
         },
         gpu: extract_gpu_name(&line[80..100]),
-        gpu_used: line[100..120].trim() != "(null)",
+        gpu_used: is_gpu_used(&line[100..140]),
     })
 }
 
@@ -93,7 +102,7 @@ fn call_and_parse_sinfo() -> HashMap<String, Partition> {
             "-h",
             "-N",
             "-O",
-            "Partition,Memory,AllocMem,CPUsState,Gres,GresUsed,NodeList",
+            "Partition,Memory,AllocMem,CPUsState,Gres,GresUsed:40,NodeList",
         ])
         .output()
         .expect("Failed to run sinfo");
