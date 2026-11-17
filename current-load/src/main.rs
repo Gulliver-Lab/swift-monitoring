@@ -259,8 +259,17 @@ fn display_partition(name: &str, partition: &Partition, colors: &Colors) {
 // MAIN
 
 fn main() {
-    let partition_dict = call_and_parse_sinfo();
-    call_and_parse_squeue();
+    let mut partition_dict = call_and_parse_sinfo();
+    let node_dict = call_and_parse_squeue();
+    for partition in partition_dict.values_mut() {
+        for node in partition.nodes.iter_mut() {
+            if node_dict.contains_key(&node.name) {
+                let (my_cpu, my_memory_mb) = node_dict.get(&node.name).unwrap();
+                node.cpu.mine = *my_cpu;
+                node.memory.mine = *my_memory_mb / 1024;
+            }
+        }
+    }
 
     let colors = Colors {
         good: "\x1b[92m".to_string(),
