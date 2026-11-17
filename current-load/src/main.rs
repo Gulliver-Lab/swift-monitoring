@@ -35,6 +35,7 @@ trait Progress {
     fn all(&self) -> u64;
     fn max(&self) -> u64;
     fn ratio_all(&self) -> f64;
+    fn ratio_mine(&self) -> f64;
 }
 
 impl Progress for Gauge {
@@ -45,7 +46,10 @@ impl Progress for Gauge {
         self.max
     }
     fn ratio_all(&self) -> f64 {
-        (self.all() as f64 / self.max() as f64).clamp(0.0, 1.0)
+        (self.all as f64 / self.max as f64).clamp(0.0, 1.0)
+    }
+    fn ratio_mine(&self) -> f64 {
+        (self.mine as f64 / self.max as f64).clamp(0.0, 1.0)
     }
 }
 
@@ -168,36 +172,76 @@ fn call_and_parse_squeue() -> HashMap<String, (u64, u64)> {
 const EIGHTHS: [char; 7] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉'];
 
 fn progress_bar<T: Progress>(progress: T, width: usize, colors: (&str, &str)) -> String {
-    let units = if progress.max() == 0 {
+    // With unicode, a character width can be divided into 8, but using appropriate characters (cf chars defined above)
+    // units refer to the number of 1/8th that must be displayed
+
+    // For everything running on the node
+    let units_all = if progress.max() == 0 {
         0.0
     } else {
         progress.ratio_all() * width as f64 * 8.0
     };
+    let mut full_all = (units_all / 8.0) as usize;
+    let mut rem_all = (units_all % 8.0) as usize;
 
-    let full = (units / 8.0) as usize;
-    let rem = (units % 8.0) as usize;
-    if rem == 0 {
-        format!(
-            "{}{}{}\x1b[0m",
-            colors.1,
-            "█".repeat(full),
-            " ".repeat(width - full)
-        )
+    // For my stuff only (other color)after a full
+    let units_mine = if progress.max() == 0 {
+        0.0
     } else {
-        let tail = EIGHTHS
-            .get(rem - 1)
+        progress.ratio_mine() * width as f64 * 8.0
+    };
+    let mut full_mine = (units_mine / 8.0) as usize;
+    let mut rem_mine = (units_mine % 8.0) as usize;
+
+    // We can't change color inside a character, so the limit between all and mine must be between full units
+    // We need to round to achieve that
+    if (full_mine == full_all) && (rem_mine > 0) {
+        if (rem_all <= 4) || (rem_mine >= 4) {
+            rem_mine = rem_all;
+            rem_all = 0;
+        } else {
+            rem_mine = 0;
+        }
+    } else {
+        if rem_mine >= 4 {
+            full_mine += 1;
+        }
+        rem_mine = 0;
+    }
+    full_all -= full_mine;
+
+    let tail_all = if rem_all > 0 {
+        EIGHTHS
+            .get(rem_all - 1)
             .copied()
             .map(|c| c.to_string())
-            .unwrap_or_default();
-        //println!("There: {} {} {}", units, full, rem);
-        format!(
-            "{}{}{}{}\x1b[0m",
-            colors.1,
-            "█".repeat(full),
-            tail,
-            " ".repeat(width - full - 1)
+            .unwrap_or_default()
+    } else {
+        "".to_string()
+    };
+    let tail_mine = if rem_mine > 0 {
+        EIGHTHS
+            .get(rem_mine - 1)
+            .copied()
+            .map(|c| c.to_string())
+            .unwrap_or_default()
+    } else {
+        "".to_string()
+    };
+
+    let (color_mine, color_all) = colors;
+    format!(
+        "{}{}{}{}{}{}{}\x1b[0m",
+        color_mine,
+        "█".repeat(full_mine),
+        tail_mine,
+        color_all,
+        "█".repeat(full_all),
+        tail_all,
+        " ".repeat(
+            width - full_all - full_mine - tail_all.chars().count() - tail_mine.chars().count()
         )
-    }
+    )
 }
 
 fn progress_bar_with_counter<T: Progress>(
