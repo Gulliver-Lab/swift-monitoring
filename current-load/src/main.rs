@@ -5,7 +5,8 @@ use std::process::Command;
 
 #[derive(Clone, Copy)]
 struct Gauge {
-    current: u64,
+    mine: u64,
+    all: u64,
     max: u64,
 }
 
@@ -30,20 +31,20 @@ struct Colors {
 }
 
 trait Progress {
-    fn current(&self) -> u64;
+    fn all(&self) -> u64;
     fn max(&self) -> u64;
-    fn ratio(&self) -> f64;
+    fn ratio_all(&self) -> f64;
 }
 
 impl Progress for Gauge {
-    fn current(&self) -> u64 {
-        self.current
+    fn all(&self) -> u64 {
+        self.all
     }
     fn max(&self) -> u64 {
         self.max
     }
-    fn ratio(&self) -> f64 {
-        (self.current() as f64 / self.max() as f64).clamp(0.0, 1.0)
+    fn ratio_all(&self) -> f64 {
+        (self.all() as f64 / self.max() as f64).clamp(0.0, 1.0)
     }
 }
 
@@ -76,7 +77,8 @@ fn node_from_sinfo_line(line: &str) -> Option<Node> {
     Some(Node {
         name: line[140..160].trim().to_string(),
         memory: Gauge {
-            current: line[40..60]
+            mine: 0,
+            all: line[40..60]
                 .trim()
                 .parse::<u64>()
                 .expect("Not valid number")
@@ -88,7 +90,8 @@ fn node_from_sinfo_line(line: &str) -> Option<Node> {
                 / 1024,
         },
         cpu: Gauge {
-            current: split_cpu_info[0].parse().expect("Not valid number"),
+            mine: 0,
+            all: split_cpu_info[0].parse().expect("Not valid number"),
             max: split_cpu_info[3].trim().parse().expect("Not valid number"),
         },
         gpu: extract_gpu_name(&line[80..100]),
@@ -130,6 +133,14 @@ fn call_and_parse_sinfo() -> HashMap<String, Partition> {
     partition_dict
 }
 
+// fn call_and_parse_squeue() {
+//     let squeue_process = Command::new("squeue")
+//         .args(["--me", "-h", "-t", "R", "-O", "MaxCPUs,NodeList,MinMemory"])
+//         .output()
+//         .expect("Failed to run squeue");
+//     let output = String::from_utf8(squeue_process.stdout).expect("Failed to decode squeue output");
+// }
+
 // DISPLAY
 
 const EIGHTHS: [char; 7] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉'];
@@ -138,7 +149,7 @@ fn progress_bar<T: Progress>(progress: T, width: usize) -> String {
     let units = if progress.max() == 0 {
         0.0
     } else {
-        progress.ratio() * width as f64 * 8.0
+        progress.ratio_all() * width as f64 * 8.0
     };
 
     let full = (units / 8.0) as usize;
@@ -162,7 +173,7 @@ fn progress_bar<T: Progress>(progress: T, width: usize) -> String {
 }
 
 fn progress_bar_with_counter<T: Progress>(progress: T, width: usize, color: &str) -> String {
-    let counter = format!("{}/{}", progress.current(), progress.max());
+    let counter = format!("{}/{}", progress.all(), progress.max());
     format!(
         "{}{}\x1b[0m {:>7}",
         color,
@@ -193,16 +204,16 @@ fn display_partition(name: &str, partition: &Partition, colors: &Colors) {
     );
 
     for node in &partition.nodes {
-        let node_cpu_color = if node.cpu.ratio() < 0.75 {
+        let node_cpu_color = if node.cpu.ratio_all() < 0.75 {
             &colors.good
-        } else if node.cpu.ratio() < 0.95 {
+        } else if node.cpu.ratio_all() < 0.95 {
             &colors.medium
         } else {
             &colors.bad
         };
-        let node_ram_color = if node.memory.ratio() < 0.75 {
+        let node_ram_color = if node.memory.ratio_all() < 0.75 {
             &colors.good
-        } else if node.cpu.ratio() < 0.95 {
+        } else if node.cpu.ratio_all() < 0.95 {
             &colors.medium
         } else {
             &colors.bad
