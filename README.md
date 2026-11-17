@@ -16,3 +16,7 @@ that used a lot less memory than what they requested.
 
 The subfolder [zfs-watch](./zfs-watch) contains a Python package to find who should
 own the data (tracked by zfs) of past users (whose accounts expired).
+
+## Current-load
+
+The subfolder [current-load](./current-load) contains a Rust binary to print the cluster's current usage to the terminal. One line per node, grouped by partition.
