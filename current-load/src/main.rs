@@ -28,6 +28,7 @@ struct Colors {
     bad: String,
     free: String,
     busy: String,
+    mine: String,
 }
 
 trait Progress {
@@ -166,7 +167,7 @@ fn call_and_parse_squeue() -> HashMap<String, (u64, u64)> {
 
 const EIGHTHS: [char; 7] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉'];
 
-fn progress_bar<T: Progress>(progress: T, width: usize) -> String {
+fn progress_bar<T: Progress>(progress: T, width: usize, colors: (&str, &str)) -> String {
     let units = if progress.max() == 0 {
         0.0
     } else {
@@ -176,7 +177,12 @@ fn progress_bar<T: Progress>(progress: T, width: usize) -> String {
     let full = (units / 8.0) as usize;
     let rem = (units % 8.0) as usize;
     if rem == 0 {
-        format!("{}{}", "█".repeat(full), " ".repeat(width - full))
+        format!(
+            "{}{}{}\x1b[0m",
+            colors.1,
+            "█".repeat(full),
+            " ".repeat(width - full)
+        )
     } else {
         let tail = EIGHTHS
             .get(rem - 1)
@@ -185,7 +191,8 @@ fn progress_bar<T: Progress>(progress: T, width: usize) -> String {
             .unwrap_or_default();
         //println!("There: {} {} {}", units, full, rem);
         format!(
-            "{}{}{}",
+            "{}{}{}{}\x1b[0m",
+            colors.1,
             "█".repeat(full),
             tail,
             " ".repeat(width - full - 1)
@@ -193,14 +200,13 @@ fn progress_bar<T: Progress>(progress: T, width: usize) -> String {
     }
 }
 
-fn progress_bar_with_counter<T: Progress>(progress: T, width: usize, color: &str) -> String {
+fn progress_bar_with_counter<T: Progress>(
+    progress: T,
+    width: usize,
+    colors: (&str, &str),
+) -> String {
     let counter = format!("{}/{}", progress.all(), progress.max());
-    format!(
-        "{}{}\x1b[0m {:>7}",
-        color,
-        progress_bar(progress, width),
-        counter
-    )
+    format!("{} {:>7}", progress_bar(progress, width, colors), counter)
 }
 
 fn gpu_tag(node: &Node) -> String {
@@ -247,8 +253,8 @@ fn display_partition(name: &str, partition: &Partition, colors: &Colors) {
         println!(
             "│ {:<7} │ {} │ {} │ {}\x1b[1m{}\x1b[0m │",
             node.name,
-            progress_bar_with_counter(node.cpu, bar_width, node_cpu_color),
-            progress_bar_with_counter(node.memory, bar_width, node_ram_color),
+            progress_bar_with_counter(node.cpu, bar_width, (&colors.mine, node_cpu_color)),
+            progress_bar_with_counter(node.memory, bar_width, (&colors.mine, node_ram_color)),
             gpu_color,
             gpu_tag(node)
         );
@@ -277,6 +283,7 @@ fn main() {
         bad: "\x1b[91m".to_string(),
         free: "\x1b[92m".to_string(),
         busy: "\x1b[91m".to_string(),
+        mine: "\x1b[94m".to_string(),
     };
 
     let partition_order = ["ludocpu", "newcpu", "oldcpu"];
