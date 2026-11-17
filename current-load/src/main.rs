@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env;
 use std::process::Command;
 
 // MODELS
@@ -138,9 +139,19 @@ fn call_and_parse_sinfo() -> HashMap<String, Partition> {
     partition_dict
 }
 
-fn call_and_parse_squeue() -> HashMap<String, (u64, u64)> {
+fn call_and_parse_squeue(username: Option<&str>) -> HashMap<String, (u64, u64)> {
+    let mut squeue_args = match username {
+        Some(username) => vec!["-u".to_string(), username.to_string()],
+        None => vec!["--me".to_string()],
+    };
+    squeue_args.extend(
+        ["-h", "-t", "R", "-O", "MaxCPUs,NodeList,MinMemory"]
+            .into_iter()
+            .map(str::to_string),
+    );
+
     let squeue_process = Command::new("squeue")
-        .args(["--me", "-h", "-t", "R", "-O", "MaxCPUs,NodeList,MinMemory"])
+        .args(squeue_args)
         .output()
         .expect("Failed to run squeue");
     let output = String::from_utf8(squeue_process.stdout).expect("Failed to decode squeue output");
@@ -310,7 +321,7 @@ fn display_partition(name: &str, partition: &Partition, colors: &Colors) {
 
 fn main() {
     let mut partition_dict = call_and_parse_sinfo();
-    let node_dict = call_and_parse_squeue();
+    let node_dict = call_and_parse_squeue(env::args().nth(1).as_deref());
     for partition in partition_dict.values_mut() {
         for node in partition.nodes.iter_mut() {
             if node_dict.contains_key(&node.name) {
