@@ -133,13 +133,26 @@ fn call_and_parse_sinfo() -> HashMap<String, Partition> {
     partition_dict
 }
 
-// fn call_and_parse_squeue() {
-//     let squeue_process = Command::new("squeue")
-//         .args(["--me", "-h", "-t", "R", "-O", "MaxCPUs,NodeList,MinMemory"])
-//         .output()
-//         .expect("Failed to run squeue");
-//     let output = String::from_utf8(squeue_process.stdout).expect("Failed to decode squeue output");
-// }
+fn call_and_parse_squeue() {
+    let squeue_process = Command::new("squeue")
+        .args(["--me", "-h", "-t", "R", "-O", "MaxCPUs,NodeList,MinMemory"])
+        .output()
+        .expect("Failed to run squeue");
+    let output = String::from_utf8(squeue_process.stdout).expect("Failed to decode squeue output");
+
+    for line in output.lines() {
+        let n_cpu = line[0..20].trim().parse::<u64>().unwrap();
+        let node_name = line[20..40].trim().to_string();
+        // mem is something like 1G or 250M
+        let mut mem_string = line[40..60].trim().to_string();
+        let memory_mb = match mem_string.pop().unwrap() {
+            'M' => mem_string.parse::<u64>().unwrap(),
+            'G' => mem_string.parse::<u64>().unwrap() * 1024,
+            _ => 0,
+        };
+        println!("{node_name}: {n_cpu} CPUs, {memory_mb}M RAM");
+    }
+}
 
 // DISPLAY
 
@@ -239,6 +252,7 @@ fn display_partition(name: &str, partition: &Partition, colors: &Colors) {
 
 fn main() {
     let partition_dict = call_and_parse_sinfo();
+    call_and_parse_squeue();
 
     let colors = Colors {
         good: "\x1b[92m".to_string(),
