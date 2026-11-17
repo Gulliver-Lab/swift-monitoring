@@ -133,14 +133,16 @@ fn call_and_parse_sinfo() -> HashMap<String, Partition> {
     partition_dict
 }
 
-fn call_and_parse_squeue() {
+fn call_and_parse_squeue() -> HashMap<String, (u64, u64)> {
     let squeue_process = Command::new("squeue")
         .args(["--me", "-h", "-t", "R", "-O", "MaxCPUs,NodeList,MinMemory"])
         .output()
         .expect("Failed to run squeue");
     let output = String::from_utf8(squeue_process.stdout).expect("Failed to decode squeue output");
 
+    let mut node_dict = HashMap::<String, (u64, u64)>::new();
     for line in output.lines() {
+        // format is ncpu, nodelist, ram, all with 20 char fixed width
         let n_cpu = line[0..20].trim().parse::<u64>().unwrap();
         let node_name = line[20..40].trim().to_string();
         // mem is something like 1G or 250M
@@ -150,8 +152,14 @@ fn call_and_parse_squeue() {
             'G' => mem_string.parse::<u64>().unwrap() * 1024,
             _ => 0,
         };
-        println!("{node_name}: {n_cpu} CPUs, {memory_mb}M RAM");
+
+        // cpu, mem
+        let (sum_cpu, sum_memory) = node_dict.entry(node_name).or_insert((0, 0));
+        *sum_cpu += n_cpu;
+        *sum_memory += memory_mb;
     }
+
+    node_dict
 }
 
 // DISPLAY
