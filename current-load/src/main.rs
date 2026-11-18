@@ -277,7 +277,7 @@ fn gpu_tag(node: &Node) -> String {
 }
 
 fn display_partition(name: &str, partition: &Partition, colors: &Colors) {
-    let bar_width = 10;
+    let bar_width = 20;
 
     // name + (bar + counter) * 2 + GPU tag + spaces
     let inner_width = 7 + (bar_width + 9) * 2 + 4 + 9;
@@ -285,9 +285,9 @@ fn display_partition(name: &str, partition: &Partition, colors: &Colors) {
     println!(
         "┌─{}{}CPU{}RAM{}GPU─┐",
         name,
-        "─".repeat(18 - name.len()),
-        "─".repeat(18),
-        "─".repeat(11),
+        "─".repeat(22 - name.len()),
+        "─".repeat(28),
+        "─".repeat(17),
     );
 
     for node in &partition.nodes {
@@ -349,6 +349,7 @@ fn main() {
         mine: "\x1b[94m".to_string(),
     };
 
+    println!("What you currently use is displayed in blue");
     let partition_order = ["ludocpu", "newcpu", "oldcpu"];
     for &partition_name in &partition_order {
         display_partition(
