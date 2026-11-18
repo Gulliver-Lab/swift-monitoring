@@ -147,7 +147,7 @@ fn call_and_parse_squeue(username: Option<&str>) -> HashMap<String, (u64, u64, b
         None => vec!["--me".to_string()],
     };
     squeue_args.extend(
-        ["-h", "-t", "R", "-O", "MaxCPUs,NodeList,MinMemory"]
+        ["-h", "-t", "R", "-O", "MaxCPUs,NodeList,MinMemory,GRES"]
             .into_iter()
             .map(str::to_string),
     );
