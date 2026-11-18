@@ -17,6 +17,7 @@ struct Node {
     cpu: Gauge,
     gpu: Option<String>,
     gpu_used: bool,
+    gpu_used_by_me: bool,
 }
 
 struct Partition {
@@ -102,6 +103,7 @@ fn node_from_sinfo_line(line: &str) -> Option<Node> {
         },
         gpu: extract_gpu_name(&line[80..100]),
         gpu_used: is_gpu_used(&line[100..140]),
+        gpu_used_by_me: false,
     })
 }
 
@@ -139,7 +141,7 @@ fn call_and_parse_sinfo() -> HashMap<String, Partition> {
     partition_dict
 }
 
-fn call_and_parse_squeue(username: Option<&str>) -> HashMap<String, (u64, u64)> {
+fn call_and_parse_squeue(username: Option<&str>) -> HashMap<String, (u64, u64, bool)> {
     let mut squeue_args = match username {
         Some(username) => vec!["-u".to_string(), username.to_string()],
         None => vec!["--me".to_string()],
@@ -156,7 +158,7 @@ fn call_and_parse_squeue(username: Option<&str>) -> HashMap<String, (u64, u64)> 
         .expect("Failed to run squeue");
     let output = String::from_utf8(squeue_process.stdout).expect("Failed to decode squeue output");
 
-    let mut node_dict = HashMap::<String, (u64, u64)>::new();
+    let mut node_dict = HashMap::<String, (u64, u64, bool)>::new();
     for line in output.lines() {
         // format is ncpu, nodelist, ram, all with 20 char fixed width
         let n_cpu = line[0..20].trim().parse::<u64>().unwrap();
@@ -168,11 +170,14 @@ fn call_and_parse_squeue(username: Option<&str>) -> HashMap<String, (u64, u64)> 
             'G' => mem_string.parse::<u64>().unwrap() * 1024,
             _ => 0,
         };
+        // The GRES column is either "N/A" or "gres/gpu:...", so only test first char
+        let gpu_used_by_me = line[60..61] == "g".to_string();
 
         // cpu, mem
-        let (sum_cpu, sum_memory) = node_dict.entry(node_name).or_insert((0, 0));
+        let (sum_cpu, sum_memory, gpu_flag) = node_dict.entry(node_name).or_insert((0, 0, false));
         *sum_cpu += n_cpu;
         *sum_memory += memory_mb;
+        *gpu_flag = *gpu_flag || gpu_used_by_me;
     }
 
     node_dict
@@ -300,7 +305,9 @@ fn display_partition(name: &str, partition: &Partition, colors: &Colors) {
         } else {
             &colors.bad
         };
-        let gpu_color = if node.gpu_used {
+        let gpu_color = if node.gpu_used_by_me {
+            &colors.mine
+        } else if node.gpu_used {
             &colors.busy
         } else {
             &colors.free
@@ -325,9 +332,10 @@ fn main() {
     for partition in partition_dict.values_mut() {
         for node in partition.nodes.iter_mut() {
             if node_dict.contains_key(&node.name) {
-                let (my_cpu, my_memory_mb) = node_dict.get(&node.name).unwrap();
+                let (my_cpu, my_memory_mb, my_gpu_flag) = node_dict.get(&node.name).unwrap();
                 node.cpu.mine = *my_cpu;
                 node.memory.mine = *my_memory_mb / 1024;
+                node.gpu_used_by_me = *my_gpu_flag;
             }
         }
     }
